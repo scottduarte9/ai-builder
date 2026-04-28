@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automation Dashboard — Scott Duarte</title>
+<style>
+  :root {
+    --color-black: #111111;
+    --color-white: #FFFFFF;
+    --color-grey-light: #F5F5F5;
+    --color-grey-mid: #E5E5E5;
+    --color-grey-muted: #757575;
+    --color-cream: #FAF9F5;
+    --font-display: "Helvetica Now Text Medium", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-body: "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--color-grey-light);
+    color: var(--color-black);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--color-black);
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .header-wordmark {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-white);
+  }
+  .header-divider {
+    width: 1px;
+    height: 20px;
+    background: #2a2a2a;
+  }
+  .header-title {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #555;
+  }
+  .header-meta {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .back-link {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: #555;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .back-link:hover { color: #888; }
+
+  /* ── BOARD LAYOUT ── */
+  .board-wrap {
+    padding: 32px 40px 48px;
+  }
+  .board-header {
+    margin-bottom: 28px;
+  }
+  .board-eyebrow {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-grey-muted);
+    margin-bottom: 6px;
+  }
+  .board-title {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: var(--color-black);
+    line-height: 1;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  /* ── COLUMNS ── */
+  .column {
+    background: var(--color-white);
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+  .column.suggested {
+    background: #f8f8f8;
+    border-top: 2px solid var(--color-grey-mid);
+  }
+  .column.to-build {
+    border-top: 2px solid var(--color-black);
+  }
+  .column.in-progress {
+    border-top: 2px solid #888;
+  }
+  .column.done {
+    border-top: 2px solid var(--color-grey-mid);
+  }
+
+  .column-header {
+    padding: 16px 20px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--color-grey-light);
+  }
+  .column.suggested .column-header { border-bottom-color: var(--color-grey-mid); }
+
+  .column-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .column.suggested .column-title { color: var(--color-grey-muted); }
+  .column.to-build .column-title { color: var(--color-black); }
+  .column.in-progress .column-title { color: #555; }
+  .column.done .column-title { color: var(--color-grey-muted); }
+
+  .column-count {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 500;
+    background: var(--color-grey-light);
+    color: var(--color-grey-muted);
+    padding: 2px 8px;
+    border-radius: 30px;
+    min-width: 24px;
+    text-align: center;
+  }
+  .column.to-build .column-count {
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+
+  .column-body {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 400px;
+    transition: background 0.15s;
+  }
+  .column-body.drag-over {
+    background: #f0f0f0;
+  }
+  .column.suggested .column-body.drag-over { background: #ebebeb; }
+
+  /* ── SUGGESTED PLACEHOLDER ── */
+  .suggested-placeholder {
+    border: 1px dashed var(--color-grey-mid);
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .suggested-placeholder p {
+    font-size: 12px;
+    color: var(--color-grey-muted);
+    line-height: 1.5;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--color-white);
+    border-top: 2px solid var(--color-black);
+    padding: 16px;
+    cursor: grab;
+    user-select: none;
+    transition: box-shadow 0.15s, opacity 0.15s;
+    position: relative;
+  }
+  .card:active { cursor: grabbing; }
+  .card.dragging {
+    opacity: 0.4;
+  }
+  .card.drag-ghost {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    opacity: 1;
+    transform: rotate(1deg);
+  }
+
+  /* Suggested column cards look muted */
+  .column.suggested .card {
+    border-top-color: var(--color-grey-mid);
+    background: #fafafa;
+  }
+  .column.done .card {
+    border-top-color: var(--color-grey-mid);
+    opacity: 0.7;
+  }
+
+  .card-name {
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-black);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .column.suggested .card-name { color: var(--color-grey-muted); }
+  .column.done .card-name { color: var(--color-grey-muted); }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--color-grey-muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .priority {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 30px;
+  }
+  .priority-high {
+    background: var(--color-black);
+    color: var(--color-white);
+  }
+  .priority-medium {
+    background: var(--color-grey-light);
+    color: var(--color-black);
+  }
+  .priority-low {
+    background: transparent;
+    color: var(--color-grey-muted);
+    border: 1px solid var(--color-grey-mid);
+  }
+
+  .card-drag-handle {
+    display: flex;
+    gap: 2px;
+    align-items: center;
+    opacity: 0.2;
+  }
+  .card-drag-handle span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--color-black);
+    display: block;
+  }
+
+  /* ── DROP INDICATOR ── */
+  .drop-indicator {
+    height: 2px;
+    background: var(--color-black);
+    margin: 4px 0;
+    border-radius: 1px;
+    display: none;
+  }
+  .drop-indicator.visible { display: block; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--color-black);
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer span {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  @media (max-width: 900px) {
+    .board { grid-template-columns: repeat(2, 1fr); }
+    .board-wrap { padding: 24px 20px 40px; }
+    .header { padding: 0 20px; }
+    footer { padding: 20px; }
+  }
+  @media (max-width: 560px) {
+    .board { grid-template-columns: 1fr; }
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 500;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 24px;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--color-white);
+    width: 100%;
+    max-width: 680px;
+    position: relative;
+    animation: modal-in 0.18s ease;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-header {
+    background: var(--color-black);
+    padding: 28px 32px 24px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .modal-eyebrow {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #555;
+    margin-bottom: 8px;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: var(--color-white);
+    line-height: 1.1;
+  }
+  .modal-close {
+    background: none;
+    border: 1px solid #2a2a2a;
+    color: #666;
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: border-color 0.15s, color 0.15s;
+    border-radius: 0;
+    padding: 0;
+  }
+  .modal-close:hover { border-color: #555; color: #aaa; }
+
+  .modal-body { padding: 32px; }
+
+  .modal-section {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--color-grey-mid);
+  }
+  .modal-section:first-child { padding-top: 0; }
+  .modal-section:last-child { border-bottom: none; padding-bottom: 0; }
+
+  .modal-section-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-grey-muted);
+    margin-bottom: 10px;
+  }
+  .modal-section-text {
+    font-size: 13px;
+    color: var(--color-black);
+    line-height: 1.6;
+  }
+
+  .modal-steps {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+  }
+  .modal-steps li {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 12px;
+    align-items: start;
+    font-size: 13px;
+    color: var(--color-black);
+    line-height: 1.5;
+  }
+  .modal-steps li span.step-num {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--color-grey-muted);
+    padding-top: 2px;
+  }
+
+  .modal-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .modal-tag {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 12px;
+    border: 1px solid var(--color-grey-mid);
+    color: var(--color-black);
+    border-radius: 30px;
+  }
+
+  .modal-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .modal-metric {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--color-black);
+    line-height: 1.5;
+  }
+  .modal-metric::before {
+    content: '—';
+    color: var(--color-grey-muted);
+    flex-shrink: 0;
+    font-family: var(--font-display);
+  }
+
+  .card-click-hint {
+    font-size: 10px;
+    color: var(--color-grey-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: var(--font-display);
+    margin-top: 8px;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .card:hover .card-click-hint { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <span class="header-wordmark">Scott Duarte</span>
+    <div class="header-divider"></div>
+    <span class="header-title">Automation Dashboard</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:20px;">
+    <span class="header-meta">Sprint 2 · Apr 2026</span>
+    <a href="ai-builder-plan.html" class="back-link">← Plan</a>
+  </div>
+</div>
+
+<!-- BOARD -->
+<div class="board-wrap">
+  <div class="board-header">
+    <div class="board-eyebrow">AI Builder Automation Portfolio</div>
+    <div class="board-title">Roadmap</div>
+    <div id="load-status" style="font-family:var(--font-display);font-size:11px;color:var(--color-grey-muted);text-transform:uppercase;letter-spacing:0.08em;margin-top:8px;"></div>
+  </div>
+
+  <div class="board">
+
+    <!-- SUGGESTED -->
+    <div class="column suggested" id="col-suggested" data-col="suggested">
+      <div class="column-header">
+        <span class="column-title">Suggested</span>
+        <span class="column-count" id="count-suggested">0</span>
+      </div>
+      <div class="column-body" id="body-suggested">
+        <div class="suggested-placeholder">
+          <p>Ideas from others will appear here. Drag to move into your build queue.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TO BUILD -->
+    <div class="column to-build" id="col-to-build" data-col="to-build">
+      <div class="column-header">
+        <span class="column-title">To Build</span>
+        <span class="column-count" id="count-to-build">0</span>
+      </div>
+      <div class="column-body" id="body-to-build"></div>
+    </div>
+
+    <!-- IN PROGRESS -->
+    <div class="column in-progress" id="col-in-progress" data-col="in-progress">
+      <div class="column-header">
+        <span class="column-title">In Progress</span>
+        <span class="column-count" id="count-in-progress">0</span>
+      </div>
+      <div class="column-body" id="body-in-progress"></div>
+    </div>
+
+    <!-- DONE -->
+    <div class="column done" id="col-done" data-col="done">
+      <div class="column-header">
+        <span class="column-title">Done</span>
+        <span class="column-count" id="count-done">0</span>
+      </div>
+      <div class="column-body" id="body-done"></div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <span>AI Builder Automation Portfolio — April 2026 | Built in L2</span>
+  <span>Scott Duarte · Turquoise Health</span>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-eyebrow">Project Scope</div>
+        <div class="modal-title" id="modal-title"></div>
+      </div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+  // ── DATA ──────────────────────────────────────────────────────────────────
+
+  let cards = [];
+
+  const NAME_TO_SLUG = {
+    'Meeting Recap Auto-Logger': 'meeting-recap',
+    'Pre-Call Brief': 'pre-call-brief',
+    'Outreach Draft Generator': 'outreach-drafts',
+    'Follow-Up Surfacing': 'follow-up-surfacing',
+    'Healthcare Intel Digest': 'healthcare-intel',
+    'Personal Admin Triage': 'admin-triage',
+    'Automate meeting recaps to Salesforce after calls': 'suggested-recap',
+    'Auto-draft prospecting sequences from new account intel': 'suggested-prospecting'
+  };
+
+  function nameToSlug(name) {
+    return NAME_TO_SLUG[name] || name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  }
+
+  function statusToColumn(status) {
+    return { 'Suggested': 'suggested', 'To Build': 'to-build', 'In Progress': 'in-progress', 'Done': 'done' }[status] || 'to-build';
+  }
+
+  function columnToStatus(col) {
+    return { 'suggested': 'Suggested', 'to-build': 'To Build', 'in-progress': 'In Progress', 'done': 'Done' }[col] || 'To Build';
+  }
+
+  async function fetchCards() {
+    document.getElementById('load-status').textContent = 'Loading…';
+    try {
+      const res = await fetch('/api/roadmap');
+      const rows = await res.json();
+      cards = rows.map(row => ({
+        notionId: row.notionId,
+        id: nameToSlug(row.name),
+        name: row.name,
+        desc: row.description || '',
+        priority: (row.priority || 'Medium').toLowerCase(),
+        column: statusToColumn(row.status)
+      }));
+      document.getElementById('load-status').textContent = '';
+      render();
+    } catch(e) {
+      document.getElementById('load-status').textContent = 'Failed to load — is vercel dev running?';
+    }
+  }
+
+  async function updateStatus(notionId, col) {
+    await fetch('/api/roadmap', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: notionId, status: columnToStatus(col) })
+    });
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────────────────
+
+  function priorityLabel(p) {
+    return { high: 'High', medium: 'Medium', low: 'Low' }[p] || p;
+  }
+
+  function createCardEl(card) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.draggable = true;
+    el.dataset.id = card.id;
+    el.innerHTML = `
+      <div class="card-name">${card.name}</div>
+      <div class="card-desc">${card.desc}</div>
+      <div class="card-footer">
+        <span class="priority priority-${card.priority}">${priorityLabel(card.priority)}</span>
+        <div class="card-drag-handle">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="card-click-hint">Click to view scope →</div>
+    `;
+
+    let didDrag = false;
+    el.addEventListener('mousedown', () => { didDrag = false; });
+    el.addEventListener('mousemove', () => { didDrag = true; });
+    el.addEventListener('click', () => { if (!didDrag) openModal(card); });
+
+    bindCardDrag(el);
+    return el;
+  }
+
+  function render() {
+    const cols = ['suggested', 'to-build', 'in-progress', 'done'];
+    cols.forEach(col => {
+      const body = document.getElementById('body-' + col);
+      // Remove all cards but keep placeholder
+      body.querySelectorAll('.card').forEach(el => el.remove());
+
+      const colCards = cards.filter(c => c.column === col);
+      colCards.forEach(card => {
+        body.appendChild(createCardEl(card));
+      });
+
+      // Update count
+      document.getElementById('count-' + col).textContent = colCards.length;
+    });
+  }
+
+  // ── DRAG AND DROP ─────────────────────────────────────────────────────────
+
+  let draggingId = null;
+
+  function bindCardDrag(el) {
+    el.addEventListener('dragstart', e => {
+      draggingId = el.dataset.id;
+      el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', draggingId);
+    });
+
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      draggingId = null;
+      document.querySelectorAll('.column-body').forEach(b => b.classList.remove('drag-over'));
+    });
+  }
+
+  document.querySelectorAll('.column-body').forEach(body => {
+    body.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      body.classList.add('drag-over');
+    });
+
+    body.addEventListener('dragleave', e => {
+      if (!body.contains(e.relatedTarget)) {
+        body.classList.remove('drag-over');
+      }
+    });
+
+    body.addEventListener('drop', e => {
+      e.preventDefault();
+      body.classList.remove('drag-over');
+
+      const id = e.dataTransfer.getData('text/plain') || draggingId;
+      if (!id) return;
+
+      const col = body.id.replace('body-', '');
+      const card = cards.find(c => c.id === id);
+      if (card && card.column !== col) {
+        card.column = col;
+        render();
+        updateStatus(card.notionId, col);
+      }
+    });
+  });
+
+  // ── CARD DETAILS ─────────────────────────────────────────────────────────
+
+  const CARD_DETAILS = {
+    'meeting-recap': {
+      notionUrl: 'https://www.notion.so/34eedf46a5c981b08863c922a897489d',
+      outcome: 'Meeting recaps write themselves and land in Salesforce before the next call starts.',
+      trigger: 'Zoom or Google Meet call ends.',
+      tools: ['Fireflies.ai / Otter.ai', 'n8n or Zapier', 'Salesforce', 'Claude (summarization)'],
+      steps: [
+        'Connect Fireflies or Otter to Zoom/Meet to auto-record and transcribe.',
+        'n8n workflow fires on call end — passes transcript to Claude.',
+        'Claude extracts: key topics, next steps, deal signals, stakeholder sentiment.',
+        'Output formatted as a Salesforce Activity log entry.',
+        'Push to Salesforce via API. Optional: 30-sec review email before it logs.',
+        'Track call coverage rate weekly to confirm nothing is slipping.'
+      ],
+      metrics: [
+        'Recap time drops from ~20 min to < 1 min per call',
+        '100% of calls logged — no manual entries',
+        'Next steps captured and visible in Salesforce same day'
+      ]
+    },
+    'pre-call-brief': {
+      notionUrl: 'https://www.notion.so/34eedf46a5c981a18594d70711b62e4f',
+      outcome: 'Walk into every call already knowing the account, the stakeholder, and the right angle.',
+      trigger: 'Meeting appears on work calendar — brief delivered 30 min before.',
+      tools: ['Google Calendar', 'Salesforce', 'LinkedIn', 'Perplexity / News API', 'Claude', 'Gmail'],
+      steps: [
+        'Calendar watch (n8n or Zapier) detects new meeting with external attendee.',
+        'Pull Salesforce account record: stage, last activity, open opps, notes.',
+        'LinkedIn lookup on attendee: title, tenure, recent posts.',
+        'News scan: account name + "price transparency" / "CMS" / "compliance" last 90 days.',
+        'Claude formats into a 1-page brief: who, what they care about, your angle, suggested opener.',
+        'Brief sent to Gmail inbox 30 min before the meeting.'
+      ],
+      metrics: [
+        'Brief delivered ≥ 30 min before 100% of external calls',
+        'Prep time drops from 15–20 min to < 2 min read',
+        'Briefings include at least one actionable conversation angle'
+      ]
+    },
+    'outreach-drafts': {
+      notionUrl: 'https://www.notion.so/34eedf46a5c9813cad10cfae5c7f7289',
+      outcome: 'Outreach drafts exist in the queue before you\'ve thought about writing them.',
+      trigger: 'Account added to Salesforce or moved to "Target" stage.',
+      tools: ['Salesforce', 'ZoomInfo', 'Perplexity', 'Claude', 'Gmail Drafts'],
+      steps: [
+        'Salesforce webhook fires when account is created or stage moves to Target.',
+        'ZoomInfo enrichment: pull contact info, org size, system type.',
+        'Perplexity searches account for recent news, compliance activity, CMS flags.',
+        'Claude identifies the strongest transparency/pricing angle for this specific account.',
+        'Claude drafts a personalized first-touch email — named contact, specific hook, clear ask.',
+        'Draft saved to Gmail. You review, edit if needed, and send.'
+      ],
+      metrics: [
+        'First-touch draft ready within 5 min of account being added',
+        'Drafting time per prospect drops from 15–20 min to < 2 min',
+        'Personalization score: every draft references a specific account detail'
+      ]
+    },
+    'follow-up-surfacing': {
+      notionUrl: 'https://www.notion.so/34eedf46a5c981b6aa7de0590c1243a2',
+      outcome: 'Follow-ups surface automatically — deals never go quiet because you forgot.',
+      trigger: 'No Salesforce activity on an open opportunity for X days (configurable per stage).',
+      tools: ['Salesforce', 'Claude', 'Gmail Drafts', 'n8n / Zapier'],
+      steps: [
+        'Scheduled n8n job (daily) scans Salesforce for open opps with no activity in X days.',
+        'Thresholds by stage: Discovery = 7 days, Proposal = 5 days, Negotiation = 3 days.',
+        'For each stale opp: pull last interaction, deal stage, next step from Salesforce.',
+        'Claude generates a context-aware follow-up draft — references last touchpoint, moves deal forward.',
+        'Draft lands in Gmail. You review and send with one click.',
+        'Salesforce activity is logged when draft is sent.'
+      ],
+      metrics: [
+        'Zero open opps go silent beyond stage threshold',
+        'Follow-up draft ready in < 2 min of trigger',
+        'Pipeline velocity improves — fewer stalled deals'
+      ]
+    },
+    'healthcare-intel': {
+      notionUrl: 'https://www.notion.so/34eedf46a5c9811e886dc5c959c737d7',
+      outcome: 'Healthcare pricing intelligence lands weekly — without hunting for it.',
+      trigger: 'Weekly schedule — Monday 7am.',
+      tools: ['Perplexity / News API', 'CMS.gov RSS', 'LinkedIn', 'Claude', 'Gmail'],
+      steps: [
+        'Scheduled trigger (Monday 7am) fires n8n workflow.',
+        'Sources scanned: CMS updates, Healthcare Brew, health system news, LinkedIn.',
+        'Claude filters for relevance: price transparency enforcement, hospital compliance, competitive moves.',
+        'Each item tagged with "How to use in a sales conversation."',
+        'Formatted as a 5–7 item digest email — scannable in under 3 min.',
+        'Sent to Gmail. Archive or act — nothing to track.'
+      ],
+      metrics: [
+        '5–7 relevant items per digest, zero noise',
+        'Every item includes a sales conversation angle',
+        'Sent before 8am Monday — ready before the week starts'
+      ]
+    },
+    'admin-triage': {
+      notionUrl: 'https://www.notion.so/34eedf46a5c98147978dd8cfef7b1caf',
+      outcome: 'Personal admin noise never interrupts a selling day.',
+      trigger: 'Continuous Gmail processing + 7pm daily digest.',
+      tools: ['Gmail Filters', 'Claude', 'n8n'],
+      steps: [
+        'Gmail filters route known admin senders (DocuSign, banks, shipping, sports groups) to "Handle Later" label.',
+        'Claude scans remaining unfiltered mail for admin patterns — flags anything non-work during 9–5.',
+        'Anything routed gets queued — not deleted, just silent.',
+        'At 7pm: n8n sends a short digest of items that actually need action (sign here, payment due, etc.).',
+        'You handle in one batch. Nothing leaks into selling hours.'
+      ],
+      metrics: [
+        'Zero personal admin interruptions 9am–5pm',
+        'Action-required items surfaced same day via 7pm digest',
+        'Setup time < 2 hours — mostly Gmail filter rules'
+      ]
+    }
+  };
+
+  // ── MODAL ─────────────────────────────────────────────────────────────────
+
+  const overlay = document.getElementById('modal-overlay');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBody = document.getElementById('modal-body');
+
+  function openModal(card) {
+    const detail = CARD_DETAILS[card.id];
+    if (!detail) return;
+
+    modalTitle.textContent = card.name;
+    modalBody.innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-label">Outcome</div>
+        <div class="modal-section-text">${detail.outcome}</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Trigger</div>
+        <div class="modal-section-text">${detail.trigger}</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Tools</div>
+        <div class="modal-tags">${detail.tools.map(t => `<span class="modal-tag">${t}</span>`).join('')}</div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Build Steps</div>
+        <ol class="modal-steps">${detail.steps.map((s, i) => `<li><span class="step-num">0${i+1}</span><span>${s}</span></li>`).join('')}</ol>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Success Metrics</div>
+        <div class="modal-metrics">${detail.metrics.map(m => `<div class="modal-metric">${m}</div>`).join('')}</div>
+      </div>
+      <div class="modal-section" style="padding-top:20px;">
+        <a href="${detail.notionUrl}" target="_blank" rel="noopener" style="
+          display:inline-flex;align-items:center;gap:8px;
+          font-family:var(--font-display);font-size:11px;font-weight:500;
+          text-transform:uppercase;letter-spacing:0.08em;
+          background:var(--color-black);color:var(--color-white);
+          padding:8px 20px;border-radius:30px;text-decoration:none;
+          transition:background 0.15s;
+        " onmouseover="this.style.background='#333'" onmouseout="this.style.background='var(--color-black)'">
+          View full spec in Notion →
+        </a>
+      </div>
+    `;
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+  // ── INIT ──────────────────────────────────────────────────────────────────
+
+  fetchCards();
+</script>
+</body>
+</html>

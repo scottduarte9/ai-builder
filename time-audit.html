@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Audit — Scott Duarte</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #21253a;
+    --border: #2a2f45;
+    --accent: #4f8ef7;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --label: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+  }
+  .header-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .header-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .header-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .header-meta-item .meta-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .header-meta-item .meta-value { font-size: 13px; color: var(--text); font-weight: 500; }
+  .goal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(79,142,247,0.12);
+    border: 1px solid rgba(79,142,247,0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 16px;
+  }
+
+  /* Alert banner */
+  .alert-banner {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+  }
+  .alert-banner h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--warn);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .alert-banner ul { padding-left: 16px; }
+  .alert-banner li { color: var(--label); font-size: 13px; margin-bottom: 4px; }
+  .alert-banner li strong { color: var(--text); }
+  .alert-gap { background: rgba(239,68,68,0.07); border-color: rgba(239,68,68,0.25); }
+  .alert-gap h3 { color: var(--danger); }
+
+  /* Section */
+  section { margin-bottom: 48px; }
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 700px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* Stat */
+  .stat-row { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-label { color: var(--label); }
+  .stat-value { font-weight: 600; color: var(--text); }
+  .stat-bar-wrap { margin-top: 4px; margin-bottom: 8px; }
+  .stat-bar-bg { background: var(--surface2); border-radius: 4px; height: 5px; overflow: hidden; }
+  .stat-bar { height: 5px; border-radius: 4px; background: var(--accent); }
+
+  /* Big number */
+  .big-num {
+    font-size: 40px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    margin: 8px 0 4px;
+  }
+  .big-num-label { font-size: 12px; color: var(--muted); }
+
+  /* Diagnostic card */
+  .diag-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .diag-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+  .diag-value { font-size: 24px; font-weight: 700; color: #fff; }
+  .diag-sub { font-size: 12px; color: var(--label); }
+
+  /* Automation card */
+  .auto-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .auto-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .auto-rank {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+  .auto-outcome {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    flex: 1;
+  }
+  .auto-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .badge-quick { background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+  .badge-medium { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .badge-big { background: rgba(124,58,237,0.12); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+  .badge-hrs { background: rgba(79,142,247,0.12); color: var(--accent); border: 1px solid rgba(79,142,247,0.25); }
+
+  .auto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 600px) { .auto-grid { grid-template-columns: 1fr; } }
+  .auto-field { background: var(--surface2); border-radius: 8px; padding: 12px 14px; }
+  .auto-field-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 4px; }
+  .auto-field-text { font-size: 13px; color: var(--label); line-height: 1.5; }
+
+  /* Goal alignment table */
+  .goal-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: start;
+  }
+  .goal-row:last-child { border-bottom: none; }
+  .goal-name { font-weight: 500; color: var(--text); }
+  .goal-signal {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .signal-blind { background: rgba(100,116,139,0.15); color: var(--muted); }
+  .signal-partial { background: rgba(245,158,11,0.12); color: var(--warn); }
+  .signal-gap { background: rgba(239,68,68,0.1); color: var(--danger); }
+  .goal-note { font-size: 12px; color: var(--label); line-height: 1.5; }
+
+  /* Tag pill */
+  .pill {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--label);
+    margin: 2px;
+  }
+
+  /* Browser category bar */
+  .cat-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .cat-row:last-child { border-bottom: none; }
+  .cat-name { width: 120px; color: var(--label); font-size: 13px; flex-shrink: 0; }
+  .cat-bar-wrap { flex: 1; }
+  .cat-count { font-weight: 600; color: var(--text); font-size: 13px; width: 40px; text-align: right; flex-shrink: 0; }
+
+  /* Data sources */
+  .source-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .source-row:last-child { border-bottom: none; }
+  .source-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: #10b981; }
+  .dot-yellow { background: #f59e0b; }
+  .dot-red { background: #ef4444; }
+  .dot-gray { background: var(--muted); }
+  .source-name { font-weight: 500; color: var(--text); min-width: 160px; }
+  .source-detail { color: var(--muted); font-size: 12px; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 24px;
+    margin-top: 48px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Draft watermark */
+  .draft-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.25);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--warn);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  h2 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  p { color: var(--label); margin-bottom: 12px; }
+
+  .insight-box {
+    background: rgba(79,142,247,0.06);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+  }
+  .insight-box p { margin-bottom: 0; font-size: 13px; color: var(--text); }
+  .insight-box strong { color: #fff; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-tag">AI Builder Automation Portfolio</div>
+    <h1>Time Audit <span class="draft-badge">Draft</span></h1>
+    <div class="header-meta">
+      <div class="header-meta-item">
+        <span class="meta-label">Name</span>
+        <span class="meta-value">Scott Duarte</span>
+      </div>
+      <div class="header-meta-item">
+        <span class="meta-label">Role</span>
+        <span class="meta-value">Enterprise Sales AE — Turquoise Health</span>
+      </div>
+      <div class="header-meta-item">
+        <span class="meta-label">Date</span>
+        <span class="meta-value">April 21, 2026</span>
+      </div>
+      <div class="header-meta-item">
+        <span class="meta-label">Data Window</span>
+        <span class="meta-value">Apr 1 – Apr 21, 2026</span>
+      </div>
+    </div>
+    <div class="goal-badge">
+      🎯 #1 Goal: Hit quota — close deals, build pipeline, become a trusted advisor in healthcare pricing
+    </div>
+  </div>
+
+  <!-- DATA GAPS ALERT -->
+  <div class="alert-banner alert-gap">
+    <h3>⚠️ Critical Data Gaps — Work Systems Not Connected</h3>
+    <ul>
+      <li><strong>Work email (scott.duarte@turquoise.health)</strong> — not connected. Connected Gmail is personal only (scottduarte9@gmail.com). All Turquoise Health communication is invisible.</li>
+      <li><strong>Work calendar</strong> — only personal Google Calendar connected. Zero visibility into meetings, prospect calls, demo schedules.</li>
+      <li><strong>Salesforce</strong> — no connector. Pipeline activity, deal stages, and activity logging are all blind spots.</li>
+      <li><strong>Slack</strong> — not connected. Internal communication patterns unknown.</li>
+      <li><strong>Mac app usage (knowledgeC.db)</strong> — blocked by macOS permissions. Fix: System Settings → Privacy &amp; Security → Full Disk Access → add Terminal (takes ~2 min).</li>
+      <li><strong>Chrome work profile</strong> — only personal profile queried. Work browsing (Salesforce, LinkedIn, ZoomInfo) likely on a separate profile or browser.</li>
+    </ul>
+  </div>
+
+  <div class="alert-banner">
+    <h3>📌 What This Audit Can and Can't Tell You</h3>
+    <ul>
+      <li>The data below reflects your <strong>personal digital activity only</strong>. It's useful for understanding non-work time drains and AI Builder Program engagement, but cannot assess your selling activity.</li>
+      <li>Automation opportunities (Section 5) are based on your <strong>CLAUDE.md goals and role</strong> — not derived from work data — and are accurate regardless of data gaps.</li>
+      <li>To get a full picture: connect your Turquoise Health Google Workspace account, add Full Disk Access for Terminal, and connect Slack via claude.ai → Settings → Connectors.</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 1: HOW I SPEND MY TIME -->
+  <section>
+    <div class="section-title">1 — How I Actually Spend My Time</div>
+
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">Top Browser Domains — Work Hours (Apr 1–21)</div>
+        <div class="cat-row">
+          <span class="cat-name">AI Builder (Leland)</span>
+          <div class="cat-bar-wrap"><div class="stat-bar-bg"><div class="stat-bar" style="width:100%;background:#4f8ef7"></div></div></div>
+          <span class="cat-count">18</span>
+        </div>
+        <div class="cat-row">
+          <span class="cat-name">Google Accounts</span>
+          <div class="cat-bar-wrap"><div class="stat-bar-bg"><div class="stat-bar" style="width:89%;background:#94a3b8"></div></div></div>
+          <span class="cat-count">24</span>
+        </div>
+        <div class="cat-row">
+          <span class="cat-name">Claude / AI Tools</span>
+          <div class="cat-bar-wrap"><div class="stat-bar-bg"><div class="stat-bar" style="width:56%;background:#10b981"></div></div></div>
+          <span class="cat-count">~10</span>
+        </div>
+        <div class="cat-row">
+          <span class="cat-name">Docs / Google Docs</span>
+          <div class="cat-bar-wrap"><div class="stat-bar-bg"><div class="stat-bar" style="width:11%;background:#94a3b8"></div></div></div>
+          <span class="cat-count">2</span>
+        </div>
+        <div class="cat-row">
+          <span class="cat-name">Dev Docs (Node/Astro)</span>
+          <div class="cat-bar-wrap"><div class="stat-bar-bg"><div class="stat-bar" style="width:28%;background:#7c3aed"></div></div></div>
+          <span class="cat-count">5</span>
+        </div>
+        <div class="cat-row">
+          <span class="cat-name">Financial / Admin</span>
+          <div class="cat-bar-wrap"><div class="stat-bar-bg"><div class="stat-bar" style="width:22%;background:#f59e0b"></div></div></div>
+          <span class="cat-count">6</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:12px;margin-bottom:0;">127 total visits. Personal Chrome profile only. No Salesforce, LinkedIn, or ZoomInfo visible — likely on a separate work profile.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Browser Activity — Category Breakdown</div>
+        <div class="stat-row">
+          <span class="stat-label">AI Tools (Claude, ChatGPT, Anthropic)</span>
+          <span class="stat-value" style="color:#10b981">~8%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">AI Builder Program (Leland)</span>
+          <span class="stat-value" style="color:#4f8ef7">14%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Google Auth / Account Mgmt</span>
+          <span class="stat-value" style="color:var(--label)">19%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Dev Docs &amp; References</span>
+          <span class="stat-value" style="color:#7c3aed">4%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Financial Admin</span>
+          <span class="stat-value" style="color:#f59e0b">5%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Gmail / Docs</span>
+          <span class="stat-value" style="color:var(--label)">2%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">CRM / Sales / Prospecting</span>
+          <span class="stat-value" style="color:var(--danger)">0% visible</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:12px;margin-bottom:0;">Work sales tools (Salesforce, LinkedIn, ZoomInfo) do not appear in the personal Chrome profile. This is a data gap, not necessarily a time gap.</p>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">Calendar — Personal Events (Apr 1–21)</div>
+        <div class="stat-row">
+          <span class="stat-label">Travel days (flights)</span>
+          <span class="stat-value">4 days</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Phoenix trip (Apr 15–17)</span>
+          <span class="stat-value" style="color:var(--accent)">3 days out</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Atlanta trip (Mar 31–Apr 2)</span>
+          <span class="stat-value" style="color:var(--accent)">2 days out</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Soccer games (North Kingstown)</span>
+          <span class="stat-value">3 games</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Work meetings visible</span>
+          <span class="stat-value" style="color:var(--danger)">0</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:12px;margin-bottom:0;">Personal calendar only. Two multi-day trips in the window — one likely involved the Phoenix/Scottsdale area. Work calendar (turquoise.health) is not connected.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Email — Personal Inbox Patterns (30 days)</div>
+        <div class="stat-row">
+          <span class="stat-label">AI Builder Program (Leland)</span>
+          <span class="stat-value" style="color:#4f8ef7">Most active thread</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Shopping / e-commerce</span>
+          <span class="stat-value">Amazon, Walmart, Wayfair</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Sports (Newport FC soccer)</span>
+          <span class="stat-value">2 mass threads</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Newsletters consumed</span>
+          <span class="stat-value">Morning Brew, Healthcare Brew, PVD Current</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Financial admin (DocuSign, Avail)</span>
+          <span class="stat-value" style="color:var(--warn)">Active (~4 threads)</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Sent emails (actual replies)</span>
+          <span class="stat-value">2 personal replies</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-top:12px;margin-bottom:0;">You subscribe to Healthcare Brew — signal that you're doing industry reading on your own time. Financial admin (DocuSign reminders for Loring Advisory) created friction.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: KEY DIAGNOSTICS -->
+  <section>
+    <div class="section-title">2 — Key Diagnostics</div>
+    <div class="alert-banner" style="margin-bottom:20px;">
+      <h3>⚠️ Limited Data — Directional Only</h3>
+      <ul>
+        <li>Without app usage data and work accounts, these diagnostics are built from partial signals. Treat as directional, not precise.</li>
+      </ul>
+    </div>
+
+    <div class="grid-3" style="margin-bottom:16px;">
+      <div class="diag-card">
+        <span class="diag-label">Context Switching</span>
+        <span class="diag-value">Unknown</span>
+        <span class="diag-sub">App usage blocked. Enable Full Disk Access for Terminal to unlock this metric. Browser shows ~127 visits across 25 domains in 3 weeks — low personal browsing volume.</span>
+      </div>
+      <div class="diag-card">
+        <span class="diag-label">Meeting Load vs. Deep Work</span>
+        <span class="diag-value">Unknown</span>
+        <span class="diag-sub">Work calendar not connected. Two multi-day travel periods visible in personal calendar (Atlanta, Phoenix) — likely customer-facing events or conferences.</span>
+      </div>
+      <div class="diag-card">
+        <span class="diag-label">Reactive vs. Proactive</span>
+        <span class="diag-value">Partial Signal</span>
+        <span class="diag-sub">Personal inbox is high-noise (newsletters, shipping, sports). Sent email shows you reply concisely and quickly. Work email signal missing.</span>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Top 3 Time Drains — Based on Available Data</div>
+        <div class="insight-box">
+          <p><strong>#1 — Financial & Admin Inbox Noise.</strong> DocuSign reminders from Loring Advisory (3 emails to sign one doc over 5 days), Avail rent platform, Capital One, Fidelity, mortgage services — these are low-value interruptions that pull you out of whatever you're doing.</p>
+        </div>
+        <div class="insight-box">
+          <p><strong>#2 — AI Builder Program Catch-Up Debt.</strong> You told Erika you've "had a tough time getting to some of the learnings over the last two weeks." The program has value but the backlog creates cognitive drag. Leland was your #1 work-hours browsing destination (18 visits), meaning you're catching up asynchronously rather than staying current.</p>
+        </div>
+        <div class="insight-box">
+          <p><strong>#3 — Unstructured Admin (Work).</strong> Based on your CLAUDE.md, meeting prep, recaps, and Salesforce logging are identified as your biggest time drains. Without work data, we can't quantify — but these are the stated pain points that need automation most.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Signals Worth Noting</div>
+        <div class="stat-row">
+          <span class="stat-label">Healthcare Brew subscriber</span>
+          <span class="stat-value" style="color:#10b981">✓ SME building</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">AI Builder Program (L2→L3)</span>
+          <span class="stat-value" style="color:#4f8ef7">Active</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Two travel periods in 3 weeks</span>
+          <span class="stat-value" style="color:var(--warn)">High travel load</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">DocuSign (personal finance)</span>
+          <span class="stat-value" style="color:var(--warn)">3 reminders, 5 days</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">ChatGPT + Claude both in use</span>
+          <span class="stat-value" style="color:var(--accent)">AI-active</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">console.anthropic.com visited</span>
+          <span class="stat-value" style="color:var(--accent)">Building, not just using</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: GOAL ALIGNMENT -->
+  <section>
+    <div class="section-title">3 — Goal Alignment</div>
+
+    <div class="card">
+      <div style="display:grid;grid-template-columns:2fr 1fr 2fr;gap:12px;padding-bottom:10px;margin-bottom:4px;">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Goal</span>
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">Signal</span>
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)">What the Data Shows</span>
+      </div>
+
+      <div class="goal-row">
+        <span class="goal-name">1. Hit quota</span>
+        <span class="goal-signal signal-blind">Blind</span>
+        <span class="goal-note">Work email, Salesforce, and Slack not connected. No visibility into pipeline activity, deal progression, or outreach volume. This is the most important goal and we have zero signal on it.</span>
+      </div>
+      <div class="goal-row">
+        <span class="goal-name">2. Build healthy pipeline</span>
+        <span class="goal-signal signal-blind">Blind</span>
+        <span class="goal-note">No Salesforce, ZoomInfo, or LinkedIn activity visible. Two travel periods likely involve prospect/customer face time (Atlanta, Phoenix), but no confirming data.</span>
+      </div>
+      <div class="goal-row">
+        <span class="goal-name">3. Close deals</span>
+        <span class="goal-signal signal-blind">Blind</span>
+        <span class="goal-note">No work communication data available. Cannot assess deal velocity or late-stage activity.</span>
+      </div>
+      <div class="goal-row">
+        <span class="goal-name">4. Deepen client relationships</span>
+        <span class="goal-signal signal-partial">Partial</span>
+        <span class="goal-note">Travel (Atlanta, Phoenix) is consistent with relationship-building trips. Healthcare Brew subscription shows you're actively building domain knowledge. No client email thread visibility.</span>
+      </div>
+      <div class="goal-row">
+        <span class="goal-name">5. Become a genuine SME</span>
+        <span class="goal-signal signal-partial">Partial</span>
+        <span class="goal-note">Healthcare Brew in your daily read stack is a good signal. AI Builder Program enrollment shows you're investing in skill development. But you flagged falling behind on the curriculum — backlog is the risk here.</span>
+      </div>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+        <p style="font-size:13px;"><strong style="color:#fff">What should be happening but isn't in the data:</strong> Systematic meeting prep before calls, structured recap logging to Salesforce after calls, and templated outreach sequences. Based on your CLAUDE.md these are manual, time-consuming, and the highest-value targets for automation. None of this is visible in the available data — which underscores how much of your actual work time is opaque without work system access.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: AUTOMATION OPPORTUNITIES -->
+  <section>
+    <div class="section-title">4 — Automation Opportunities <span class="draft-badge">Draft</span></div>
+    <p style="margin-bottom:20px;">Ranked by: (hours reclaimed/week) × (directness to quota goal). Based on stated pain points in CLAUDE.md, not derived from work system data.</p>
+
+    <!-- Auto 1 -->
+    <div class="auto-card">
+      <div class="auto-card-header">
+        <div style="flex:1">
+          <div class="auto-rank">#1 — Highest Impact</div>
+          <div class="auto-outcome" style="margin-top:6px;">Meeting recaps write themselves and land in Salesforce before your next call starts.</div>
+          <div class="auto-badges">
+            <span class="badge badge-quick">Quick Win</span>
+            <span class="badge badge-hrs">~3–4 hrs/week reclaimed</span>
+          </div>
+        </div>
+      </div>
+      <div class="auto-grid">
+        <div class="auto-field">
+          <div class="auto-field-label">What's happening today</div>
+          <div class="auto-field-text">After every call, you manually reconstruct what was discussed, type a recap, and log it to Salesforce. At ~20 min/call × 10+ calls/week, this is 3+ hours of post-call admin weekly.</div>
+        </div>
+        <div class="auto-field">
+          <div class="auto-field-label">Automated version</div>
+          <div class="auto-field-text">Trigger: Zoom/Google Meet call ends. AI transcribes + summarizes key points, next steps, and deal signals. Formats as Salesforce activity log. You review and approve in 30 seconds — or set it to auto-log.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto 2 -->
+    <div class="auto-card">
+      <div class="auto-card-header">
+        <div style="flex:1">
+          <div class="auto-rank">#2</div>
+          <div class="auto-outcome" style="margin-top:6px;">You walk into every call already knowing the account, the stakeholder, and the right angle — without spending time on it.</div>
+          <div class="auto-badges">
+            <span class="badge badge-quick">Quick Win</span>
+            <span class="badge badge-hrs">~2–3 hrs/week reclaimed</span>
+          </div>
+        </div>
+      </div>
+      <div class="auto-grid">
+        <div class="auto-field">
+          <div class="auto-field-label">What's happening today</div>
+          <div class="auto-field-text">Before each call you manually look up the account in Salesforce, search LinkedIn for the contact, check recent news, and assemble context. ~15–20 min per meeting.</div>
+        </div>
+        <div class="auto-field">
+          <div class="auto-field-label">Automated version</div>
+          <div class="auto-field-text">Trigger: Meeting appears on work calendar. AI pulls Salesforce account data, LinkedIn profile, recent news/press releases, and prior call notes. Delivers a 1-page brief to your inbox 30 min before the call.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto 3 -->
+    <div class="auto-card">
+      <div class="auto-card-header">
+        <div style="flex:1">
+          <div class="auto-rank">#3</div>
+          <div class="auto-outcome" style="margin-top:6px;">Outreach drafts exist in your queue before you've thought about writing them.</div>
+          <div class="auto-badges">
+            <span class="badge badge-medium">Medium Lift</span>
+            <span class="badge badge-hrs">~2 hrs/week reclaimed</span>
+          </div>
+        </div>
+      </div>
+      <div class="auto-grid">
+        <div class="auto-field">
+          <div class="auto-field-label">What's happening today</div>
+          <div class="auto-field-text">Prospecting emails are written from scratch. Each first-touch email requires researching the account, finding a relevant angle, and drafting copy — ~15–20 min per prospect.</div>
+        </div>
+        <div class="auto-field">
+          <div class="auto-field-label">Automated version</div>
+          <div class="auto-field-text">Trigger: New account added to Salesforce or moved to "Target" stage. AI researches the account + contact, identifies a relevant pricing/transparency angle, and drafts a personalized first-touch email. You edit and send — no blank page.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto 4 -->
+    <div class="auto-card">
+      <div class="auto-card-header">
+        <div style="flex:1">
+          <div class="auto-rank">#4</div>
+          <div class="auto-outcome" style="margin-top:6px;">Follow-ups never fall through the cracks — they surface automatically based on deal stage and time since last activity.</div>
+          <div class="auto-badges">
+            <span class="badge badge-medium">Medium Lift</span>
+            <span class="badge badge-hrs">~1–2 hrs/week reclaimed</span>
+          </div>
+        </div>
+      </div>
+      <div class="auto-grid">
+        <div class="auto-field">
+          <div class="auto-field-label">What's happening today</div>
+          <div class="auto-field-text">You mentally track who you haven't followed up with. Deals go quiet because there's no automated nudge — just your memory and a crowded calendar.</div>
+        </div>
+        <div class="auto-field">
+          <div class="auto-field-label">Automated version</div>
+          <div class="auto-field-text">Trigger: Salesforce detects no activity on an open opportunity for X days. AI generates a follow-up draft contextual to the deal stage and last interaction. Delivered to your inbox as a ready-to-send draft.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto 5 -->
+    <div class="auto-card">
+      <div class="auto-card-header">
+        <div style="flex:1">
+          <div class="auto-rank">#5</div>
+          <div class="auto-outcome" style="margin-top:6px;">Healthcare pricing intelligence lands in your inbox weekly — without you hunting for it.</div>
+          <div class="auto-badges">
+            <span class="badge badge-quick">Quick Win</span>
+            <span class="badge badge-hrs">~1 hr/week reclaimed</span>
+          </div>
+        </div>
+      </div>
+      <div class="auto-grid">
+        <div class="auto-field">
+          <div class="auto-field-label">What's happening today</div>
+          <div class="auto-field-text">You read Healthcare Brew and morning newsletters to build domain knowledge. This is good — but it's passive and unfocused on the specific sub-topics that make you a better AE (price transparency enforcement, hospital compliance patterns, CMS updates).</div>
+        </div>
+        <div class="auto-field">
+          <div class="auto-field-label">Automated version</div>
+          <div class="auto-field-text">Trigger: Weekly schedule. AI scans news, CMS updates, and LinkedIn for healthcare pricing/transparency topics. Delivers a curated briefing with 5–7 items, each tagged with "how to use in a sales conversation." Builds your SME rep without adding reading time.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto 6 -->
+    <div class="auto-card">
+      <div class="auto-card-header">
+        <div style="flex:1">
+          <div class="auto-rank">#6</div>
+          <div class="auto-outcome" style="margin-top:6px;">Personal admin noise (financial docs, shipping, reminders) never interrupts a selling day.</div>
+          <div class="auto-badges">
+            <span class="badge badge-quick">Quick Win</span>
+            <span class="badge badge-hrs">~30 min/week reclaimed</span>
+          </div>
+        </div>
+      </div>
+      <div class="auto-grid">
+        <div class="auto-field">
+          <div class="auto-field-label">What's happening today</div>
+          <div class="auto-field-text">DocuSign reminders, shipping notifications, financial account nudges, and sports group emails surface during the workday and pull attention. Observable in the personal inbox data above.</div>
+        </div>
+        <div class="auto-field">
+          <div class="auto-field-label">Automated version</div>
+          <div class="auto-field-text">Gmail filter + AI triage: personal admin goes to a "handle later" folder. A daily digest at 7pm shows everything that actually needs action. Zero cognitive interruption during selling hours.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: DATA SOURCES -->
+  <section>
+    <div class="section-title">5 — Data Sources</div>
+    <div class="card">
+      <div class="source-row">
+        <div class="source-dot dot-green"></div>
+        <span class="source-name">Chrome Browser History</span>
+        <span class="source-detail">Personal profile (scottduarte9@gmail.com) · Apr 1–21, 2026 · 127 visits · Work profile not included</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-yellow"></div>
+        <span class="source-name">Google Calendar</span>
+        <span class="source-detail">Personal calendar only (scottduarte9@gmail.com) · Mar 27–Apr 21, 2026 · Work calendar (turquoise.health) not connected</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-yellow"></div>
+        <span class="source-name">Gmail</span>
+        <span class="source-detail">Personal inbox (scottduarte9@gmail.com) · Last 30 days · Work email (turquoise.health) not connected</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-red"></div>
+        <span class="source-name">Mac App Usage (knowledgeC.db)</span>
+        <span class="source-detail">BLOCKED — Terminal lacks Full Disk Access · Fix: System Settings → Privacy &amp; Security → Full Disk Access → add Terminal (~2 min)</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-gray"></div>
+        <span class="source-name">Salesforce</span>
+        <span class="source-detail">Not connected · No MCP connector available · Highest-value source for deal/pipeline analysis</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-gray"></div>
+        <span class="source-name">Slack</span>
+        <span class="source-detail">Not connected · Available via claude.ai → Settings → Connectors (under 2 min to set up)</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-gray"></div>
+        <span class="source-name">Work Gmail / Google Workspace</span>
+        <span class="source-detail">Not connected · Add scott.duarte@turquoise.health via claude.ai → Settings → Connectors to unlock full picture</span>
+      </div>
+      <div class="source-row">
+        <div class="source-dot dot-gray"></div>
+        <span class="source-name">LinkedIn / ZoomInfo</span>
+        <span class="source-detail">Not connected · No MCP connector · Prospecting activity invisible</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;background:rgba(79,142,247,0.05);border-color:rgba(79,142,247,0.2);">
+      <div class="card-title" style="color:var(--accent)">To Make This Audit Complete</div>
+      <p style="font-size:13px;margin-bottom:8px;">These three actions unlock the full picture and take under 10 minutes total:</p>
+      <div class="stat-row"><span class="stat-label">1. Connect work Google Workspace (Gmail + Calendar)</span><span class="stat-value" style="color:#10b981">~2 min</span></div>
+      <div class="stat-row"><span class="stat-label">2. Enable Full Disk Access for Terminal in macOS</span><span class="stat-value" style="color:#10b981">~2 min</span></div>
+      <div class="stat-row"><span class="stat-label">3. Connect Slack via claude.ai → Settings → Connectors</span><span class="stat-value" style="color:#10b981">~2 min</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Time Audit — April 21, 2026 | Part of my AI Builder Automation Portfolio</span>
+    <span>Scott Duarte · Enterprise Sales AE · Turquoise Health</span>
+  </footer>
+
+</div>
+</body>
+</html>

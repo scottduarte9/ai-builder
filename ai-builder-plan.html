@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Builder Plan — Scott Duarte</title>
+<style>
+  :root {
+    --color-black: #111111;
+    --color-white: #FFFFFF;
+    --color-grey-light: #F5F5F5;
+    --color-grey-mid: #E5E5E5;
+    --color-grey-muted: #757575;
+    --color-cream: #FAF9F5;
+    --font-display: "Helvetica Now Text Medium", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-body: "Helvetica Now Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-size-hero: 76px;
+    --font-size-section: 32px;
+    --font-size-subhead: 24px;
+    --font-size-card: 20px;
+    --font-size-base: 16px;
+    --font-size-small: 14px;
+    --font-size-xs: 12px;
+    --line-height-hero: 0.9;
+    --btn-radius: 30px;
+    --btn-padding: 6px 16px;
+    --section-gap: 80px;
+    --card-gap: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--color-white);
+    color: var(--color-black);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: var(--color-black);
+    color: var(--color-white);
+    width: 100%;
+    padding: 72px 64px 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 110% 120%, #2a2a2a 0%, transparent 60%),
+      radial-gradient(ellipse 50% 80% at -10% 50%, #1e1e1e 0%, transparent 55%);
+    pointer-events: none;
+  }
+  .hero-bg-text {
+    position: absolute;
+    right: -20px;
+    top: -20px;
+    font-family: var(--font-display);
+    font-size: 280px;
+    font-weight: 500;
+    color: transparent;
+    -webkit-text-stroke: 1px #1e1e1e;
+    text-transform: uppercase;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    letter-spacing: -0.04em;
+  }
+  .hero > * { position: relative; z-index: 1; }
+  .hero-eyebrow {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 20px;
+  }
+  .hero-name {
+    font-family: var(--font-display);
+    font-size: var(--font-size-hero);
+    font-weight: 500;
+    text-transform: uppercase;
+    line-height: var(--line-height-hero);
+    letter-spacing: -0.01em;
+    color: var(--color-white);
+    margin-bottom: 8px;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-hero);
+    font-weight: 500;
+    text-transform: uppercase;
+    line-height: var(--line-height-hero);
+    letter-spacing: -0.01em;
+    color: #444;
+  }
+  .hero-meta {
+    margin-top: 40px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 24px;
+    border-top: 1px solid #2a2a2a;
+    padding-top: 24px;
+  }
+  .hero-goal {
+    font-family: var(--font-body);
+    font-size: var(--font-size-small);
+    color: #aaa;
+    max-width: 600px;
+    line-height: 1.5;
+  }
+  .hero-goal strong {
+    color: var(--color-white);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    font-size: var(--font-size-xs);
+    letter-spacing: 0.08em;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .hero-date {
+    font-size: var(--font-size-xs);
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--font-display);
+    text-align: right;
+  }
+
+  /* ── SECTION WRAPPER ── */
+  .section { padding: 72px 64px; }
+  .section-white { background: var(--color-white); }
+  .section-cream { background: var(--color-cream); }
+  .section-grey { background: var(--color-grey-light); }
+
+  .section-label {
+    font-family: var(--font-display);
+    font-size: var(--font-size-section);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: -0.01em;
+    color: var(--color-black);
+    margin-bottom: 48px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-grey-mid);
+  }
+
+  /* ── TIME SUMMARY ── */
+  .insight {
+    padding: 28px 0;
+    border-bottom: 1px solid var(--color-grey-mid);
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .insight:first-of-type { border-top: none; }
+  .insight-num {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--color-grey-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-top: 3px;
+  }
+  .insight-text {
+    font-size: var(--font-size-base);
+    color: var(--color-black);
+    line-height: 1.6;
+  }
+  .insight-text strong { font-family: var(--font-display); }
+  .audit-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 32px;
+    font-family: var(--font-display);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    color: var(--color-black);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-black);
+    padding-bottom: 2px;
+    letter-spacing: 0.02em;
+  }
+  .audit-link:hover { color: var(--color-grey-muted); border-color: var(--color-grey-muted); }
+
+  /* ── EDITORIAL BREAK ── */
+  .editorial-break {
+    width: 100%;
+    min-height: 420px;
+    background: var(--color-black);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+  .editorial-visual {
+    position: relative;
+    background: #0a0a0a;
+    overflow: hidden;
+    min-height: 420px;
+  }
+  .editorial-visual-inner {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 40%, #111 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .editorial-visual-inner::before {
+    content: '';
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    border: 1px solid #1e1e1e;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .editorial-visual-inner::after {
+    content: '';
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    border: 1px solid #222;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .editorial-visual-num {
+    font-family: var(--font-display);
+    font-size: 200px;
+    font-weight: 500;
+    color: transparent;
+    -webkit-text-stroke: 1px #2a2a2a;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    position: relative;
+    z-index: 1;
+    user-select: none;
+  }
+  .editorial-copy {
+    padding: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 24px;
+  }
+  .editorial-stat {
+    font-family: var(--font-display);
+    font-size: 80px;
+    font-weight: 500;
+    color: var(--color-white);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+  }
+  .editorial-stat-label {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #555;
+    margin-top: 16px;
+  }
+  .editorial-caption {
+    font-size: var(--font-size-small);
+    color: #666;
+    line-height: 1.6;
+    max-width: 360px;
+    border-top: 1px solid #222;
+    padding-top: 24px;
+    margin-top: 8px;
+  }
+
+  /* ── AUTOMATION CARDS ── */
+  .auto-card {
+    padding: 40px 0;
+    border-bottom: 1px solid var(--color-grey-mid);
+  }
+  .auto-card:last-child { border-bottom: none; }
+  .auto-card-top {
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    gap: 24px;
+    align-items: start;
+    margin-bottom: 28px;
+  }
+  .auto-rank {
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 500;
+    color: var(--color-grey-mid);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    padding-top: 4px;
+  }
+  .auto-outcome {
+    font-family: var(--font-display);
+    font-size: var(--font-size-subhead);
+    font-weight: 500;
+    color: var(--color-black);
+    line-height: 1.3;
+  }
+  .auto-tags {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+    flex-shrink: 0;
+  }
+  .tag {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xs);
+    font-weight: 500;
+    padding: 4px 14px;
+    border-radius: 30px;
+    white-space: nowrap;
+    display: inline-block;
+  }
+  .tag-dark { background: var(--color-black); color: var(--color-white); }
+  .tag-light { background: var(--color-grey-light); color: var(--color-black); }
+  .tag-outline { background: transparent; color: var(--color-grey-muted); border: 1px solid var(--color-grey-mid); }
+  .tag-status { background: var(--color-grey-light); color: var(--color-grey-muted); letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; }
+
+  .auto-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--card-gap);
+    margin-left: 96px;
+  }
+  .auto-field {
+    background: var(--color-grey-light);
+    padding: 20px 24px;
+  }
+  .auto-field-label {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-grey-muted);
+    margin-bottom: 8px;
+  }
+  .auto-field-text {
+    font-size: var(--font-size-small);
+    color: var(--color-black);
+    line-height: 1.6;
+  }
+
+  /* ── SPRINT SYSTEM ── */
+  .sprint-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--card-gap);
+  }
+  .sprint-card {
+    background: var(--color-white);
+    padding: 28px 20px;
+    border-top: 2px solid var(--color-grey-mid);
+  }
+  .sprint-num {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-grey-muted);
+    margin-bottom: 12px;
+  }
+  .sprint-title {
+    font-family: var(--font-display);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    color: var(--color-grey-muted);
+    line-height: 1.4;
+    margin-bottom: 20px;
+  }
+  .sprint-coming {
+    font-size: var(--font-size-xs);
+    color: var(--color-grey-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--font-display);
+  }
+
+  /* ── CURRENT SPRINT HIGHLIGHT ── */
+  .sprint-card.active {
+    background: var(--color-black);
+    border-top-color: var(--color-black);
+  }
+  .sprint-card.active .sprint-num { color: #555; }
+  .sprint-card.active .sprint-title { color: var(--color-white); }
+  .sprint-card.active .sprint-coming { color: var(--color-grey-muted); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--color-black);
+    padding: 28px 64px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  footer span {
+    font-family: var(--font-display);
+    font-size: var(--font-size-xs);
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { padding: 48px 32px 40px; }
+    .hero-name, .hero-title { font-size: 48px; }
+    .hero-bg-text { font-size: 160px; }
+    .section { padding: 48px 32px; }
+    .auto-card-top { grid-template-columns: 48px 1fr; }
+    .auto-rank { font-size: 32px; }
+    .auto-tags { flex-direction: row; grid-column: 1/-1; }
+    .auto-grid { margin-left: 72px; grid-template-columns: 1fr; }
+    .sprint-grid { grid-template-columns: 1fr 1fr; }
+    footer { padding: 24px 32px; }
+    .editorial-break { grid-template-columns: 1fr; }
+    .editorial-visual { min-height: 240px; }
+    .editorial-copy { padding: 48px 32px; }
+    .editorial-stat { font-size: 56px; }
+  }
+  @media (max-width: 600px) {
+    .sprint-grid { grid-template-columns: 1fr; }
+    .auto-grid { margin-left: 0; }
+    .hero-bg-text { display: none; }
+    .editorial-visual-num { font-size: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-bg-text">Build</div>
+  <div class="hero-eyebrow">AI Builder Automation Portfolio — Sprint 2</div>
+  <div class="hero-name">Scott Duarte</div>
+  <div class="hero-title">Automation Plan</div>
+  <div class="hero-meta">
+    <div class="hero-goal">
+      <strong>#1 Goal</strong>
+      Hit quota — close deals, build pipeline, become a trusted advisor in healthcare pricing
+    </div>
+    <div class="hero-date">April 21, 2026</div>
+  </div>
+</div>
+
+<!-- ── SECTION 2: TIME SUMMARY ── -->
+<div class="section section-white">
+  <div class="section-label">Time Summary</div>
+
+  <div class="insight">
+    <div class="insight-num">01</div>
+    <div class="insight-text"><strong>The work systems are dark.</strong> Gmail, Calendar, Salesforce, and Slack connected to this audit are all personal accounts — zero visibility into selling activity. The automation opportunities below are based on your stated role and pain points, not measured data. That makes them directional but accurate: meeting prep, recaps, and outreach are your biggest time costs regardless of what the data says.</div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-num">02</div>
+    <div class="insight-text"><strong>Post-call admin is the single biggest recoverable time block.</strong> At ~20 min per call × 10+ calls/week, meeting recaps and Salesforce logging alone cost 3–4 hours every week. That's the clearest automation target — and a Quick Win, not a big build. Every hour spent on it after the first automation is a straight tax on quota time.</div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-num">03</div>
+    <div class="insight-text"><strong>You're building in the right direction — but carrying a backlog.</strong> AI Builder Program is your top work-hours browser destination (18 visits). You're using Claude and ChatGPT actively. But you flagged falling behind on the curriculum. The risk isn't motivation — it's bandwidth. Automating the admin frees the hours the program needs.</div>
+  </div>
+
+  <a href="time-audit.html" class="audit-link">Full Time Audit →</a>
+</div>
+
+<!-- ── EDITORIAL BREAK ── -->
+<div class="editorial-break">
+  <div class="editorial-visual">
+    <div class="editorial-visual-inner">
+      <div class="editorial-visual-num">9</div>
+    </div>
+  </div>
+  <div class="editorial-copy">
+    <div>
+      <div class="editorial-stat">9+ hrs</div>
+      <div class="editorial-stat-label">Recoverable per week</div>
+    </div>
+    <div class="editorial-caption">
+      Six automations. Four are quick wins. The top two alone — recaps and pre-call briefs — return more than a full workday every week. That time goes back to selling.
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 3: WHAT I'M BUILDING ── -->
+<div class="section section-cream">
+  <div class="section-label">What I'm Building</div>
+
+  <!-- #1: Meeting Recaps -->
+  <div class="auto-card">
+    <div class="auto-card-top">
+      <div class="auto-rank">01</div>
+      <div class="auto-outcome">Meeting recaps write themselves and land in Salesforce before the next call starts.</div>
+      <div class="auto-tags">
+        <span class="tag tag-dark">Quick Win</span>
+        <span class="tag tag-light">~3–4 hrs / week</span>
+        <span class="tag tag-status">Not Started</span>
+      </div>
+    </div>
+    <div class="auto-grid">
+      <div class="auto-field">
+        <div class="auto-field-label">What's happening today</div>
+        <div class="auto-field-text">After every call, manually reconstruct what was discussed, type a recap, and log it to Salesforce. At ~20 min/call × 10+ calls/week, this is 3+ hours of post-call admin every single week.</div>
+      </div>
+      <div class="auto-field">
+        <div class="auto-field-label">Automated version</div>
+        <div class="auto-field-text">Trigger: Zoom/Meet call ends. AI transcribes and summarizes key points, next steps, and deal signals. Formats as a Salesforce activity log. Review and approve in 30 seconds — or set to auto-log.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #2: Pre-call Brief -->
+  <div class="auto-card">
+    <div class="auto-card-top">
+      <div class="auto-rank">02</div>
+      <div class="auto-outcome">Walk into every call already knowing the account, the stakeholder, and the right angle.</div>
+      <div class="auto-tags">
+        <span class="tag tag-dark">Quick Win</span>
+        <span class="tag tag-light">~2–3 hrs / week</span>
+        <span class="tag tag-status">Not Started</span>
+      </div>
+    </div>
+    <div class="auto-grid">
+      <div class="auto-field">
+        <div class="auto-field-label">What's happening today</div>
+        <div class="auto-field-text">Before each call: manually look up the account in Salesforce, search LinkedIn for the contact, check recent news, assemble context. ~15–20 min per meeting — every meeting.</div>
+      </div>
+      <div class="auto-field">
+        <div class="auto-field-label">Automated version</div>
+        <div class="auto-field-text">Trigger: Meeting appears on work calendar. AI pulls Salesforce account data, LinkedIn profile, recent news and prior call notes. Delivers a 1-page brief to inbox 30 min before the call.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #3: Outreach Drafts -->
+  <div class="auto-card">
+    <div class="auto-card-top">
+      <div class="auto-rank">03</div>
+      <div class="auto-outcome">Outreach drafts exist in the queue before you've thought about writing them.</div>
+      <div class="auto-tags">
+        <span class="tag tag-outline">Medium Lift</span>
+        <span class="tag tag-light">~2 hrs / week</span>
+        <span class="tag tag-status">Not Started</span>
+      </div>
+    </div>
+    <div class="auto-grid">
+      <div class="auto-field">
+        <div class="auto-field-label">What's happening today</div>
+        <div class="auto-field-text">Prospecting emails written from scratch. Each first-touch requires researching the account, finding a pricing/transparency angle, and drafting copy — ~15–20 min per prospect.</div>
+      </div>
+      <div class="auto-field">
+        <div class="auto-field-label">Automated version</div>
+        <div class="auto-field-text">Trigger: Account added to Salesforce or moved to "Target" stage. AI researches account + contact, identifies a relevant transparency angle, drafts a personalized first-touch. You edit and send — no blank page.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #4: Follow-up Surfacing -->
+  <div class="auto-card">
+    <div class="auto-card-top">
+      <div class="auto-rank">04</div>
+      <div class="auto-outcome">Follow-ups surface automatically — deals never go quiet because you forgot.</div>
+      <div class="auto-tags">
+        <span class="tag tag-outline">Medium Lift</span>
+        <span class="tag tag-light">~1–2 hrs / week</span>
+        <span class="tag tag-status">Not Started</span>
+      </div>
+    </div>
+    <div class="auto-grid">
+      <div class="auto-field">
+        <div class="auto-field-label">What's happening today</div>
+        <div class="auto-field-text">Mentally tracking who hasn't been followed up with. Deals go quiet because there's no automated nudge — just memory and a crowded calendar.</div>
+      </div>
+      <div class="auto-field">
+        <div class="auto-field-label">Automated version</div>
+        <div class="auto-field-text">Trigger: Salesforce detects no activity on an open opportunity for X days. AI generates a context-aware follow-up draft based on deal stage and last interaction. Delivered as a ready-to-send draft.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #5: Healthcare Intel -->
+  <div class="auto-card">
+    <div class="auto-card-top">
+      <div class="auto-rank">05</div>
+      <div class="auto-outcome">Healthcare pricing intelligence lands weekly — without hunting for it.</div>
+      <div class="auto-tags">
+        <span class="tag tag-dark">Quick Win</span>
+        <span class="tag tag-light">~1 hr / week</span>
+        <span class="tag tag-status">Not Started</span>
+      </div>
+    </div>
+    <div class="auto-grid">
+      <div class="auto-field">
+        <div class="auto-field-label">What's happening today</div>
+        <div class="auto-field-text">Reading Healthcare Brew and morning newsletters passively. Good intent, but unfocused — not targeted at the specific topics that make a better AE: price transparency enforcement, hospital compliance, CMS updates.</div>
+      </div>
+      <div class="auto-field">
+        <div class="auto-field-label">Automated version</div>
+        <div class="auto-field-text">Trigger: Weekly schedule. AI scans news, CMS updates, and LinkedIn. Delivers a curated 5–7 item briefing, each tagged with "how to use in a sales conversation." Builds SME rep without adding reading time.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- #6: Personal Admin Triage -->
+  <div class="auto-card">
+    <div class="auto-card-top">
+      <div class="auto-rank">06</div>
+      <div class="auto-outcome">Personal admin noise never interrupts a selling day.</div>
+      <div class="auto-tags">
+        <span class="tag tag-dark">Quick Win</span>
+        <span class="tag tag-light">~30 min / week</span>
+        <span class="tag tag-status">Not Started</span>
+      </div>
+    </div>
+    <div class="auto-grid">
+      <div class="auto-field">
+        <div class="auto-field-label">What's happening today</div>
+        <div class="auto-field-text">DocuSign reminders, shipping notifications, financial account nudges, and sports group emails surface during work hours and pull attention — visible in the time audit inbox data.</div>
+      </div>
+      <div class="auto-field">
+        <div class="auto-field-label">Automated version</div>
+        <div class="auto-field-text">Gmail filter + AI triage: personal admin routed to a "handle later" folder. Daily digest at 7pm surfaces anything that actually needs action. Zero cognitive interruption during selling hours.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── EDITORIAL BREAK 2 ── -->
+<div class="editorial-break" style="grid-template-columns: 1fr 1fr;">
+  <div class="editorial-copy" style="padding: 64px; background: var(--color-black);">
+    <div>
+      <div class="editorial-stat">6</div>
+      <div class="editorial-stat-label">Sprints to a full system</div>
+    </div>
+    <div class="editorial-caption">
+      Each sprint ships something real. By S6 the whole system is tested, documented, and running without you.
+    </div>
+  </div>
+  <div class="editorial-visual">
+    <div class="editorial-visual-inner" style="background: linear-gradient(145deg, #111 0%, #0d0d0d 50%, #161616 100%);">
+      <div style="position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;padding:40px;">
+        <div style="height:3px;background:#1e1e1e;width:200px;border-radius:2px;"></div>
+        <div style="height:3px;background:#252525;width:140px;border-radius:2px;"></div>
+        <div style="height:3px;background:#1a1a1a;width:180px;border-radius:2px;"></div>
+        <div style="height:3px;background:#222;width:100px;border-radius:2px;"></div>
+        <div style="height:3px;background:#1e1e1e;width:220px;border-radius:2px;margin-top:16px;"></div>
+        <div style="height:3px;background:#252525;width:160px;border-radius:2px;"></div>
+        <div style="font-family:var(--font-display);font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:#2a2a2a;margin-top:24px;">S1 → S6</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SECTION 4: MY SYSTEM ── -->
+<div class="section section-grey">
+  <div class="section-label">My System</div>
+  <div class="sprint-grid">
+
+    <div class="sprint-card active">
+      <div class="sprint-num">S1 — Now</div>
+      <div class="sprint-title">Time Audit + Automation Plan</div>
+      <div class="sprint-coming">In Progress</div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-num">S2</div>
+      <div class="sprint-title">Deployed website + data collection tool</div>
+      <div class="sprint-coming">Coming in Sprint 2</div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-num">S3</div>
+      <div class="sprint-title">Automated n8n or Claude Routines workflow</div>
+      <div class="sprint-coming">Coming in Sprint 3</div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-num">S4</div>
+      <div class="sprint-title">Knowledge wiki context system</div>
+      <div class="sprint-coming">Coming in Sprint 4</div>
+    </div>
+
+    <div class="sprint-card">
+      <div class="sprint-num">S5</div>
+      <div class="sprint-title">Custom agentic workflow</div>
+      <div class="sprint-coming">Coming in Sprint 5</div>
+    </div>
+
+  </div>
+
+  <div style="margin-top: var(--card-gap);">
+    <div class="sprint-card" style="background: var(--color-white); border-top: 2px solid var(--color-grey-mid); display: inline-block; min-width: 240px;">
+      <div class="sprint-num">S6</div>
+      <div class="sprint-title">Eval System — tested and documented</div>
+      <div class="sprint-coming">Coming in Sprint 6</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span>AI Builder Automation Portfolio — April 21, 2026 | Built in L2</span>
+  <span>Scott Duarte · Turquoise Health</span>
+</footer>
+
+</body>
+</html>
