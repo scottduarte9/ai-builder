@@ -681,16 +681,16 @@
   <div class="section-label">My System</div>
   <div class="sprint-grid">
 
-    <div class="sprint-card active">
-      <div class="sprint-num">S1 — Now</div>
+    <div class="sprint-card">
+      <div class="sprint-num">S1 — Done</div>
       <div class="sprint-title">Time Audit + Automation Plan</div>
-      <div class="sprint-coming">In Progress</div>
+      <div class="sprint-coming">Done</div>
     </div>
 
-    <div class="sprint-card">
-      <div class="sprint-num">S2</div>
+    <div class="sprint-card active">
+      <div class="sprint-num">S2 — Done</div>
       <div class="sprint-title">Deployed website + data collection tool</div>
-      <div class="sprint-coming">Coming in Sprint 2</div>
+      <div class="sprint-coming">Done</div>
     </div>
 
     <div class="sprint-card">
@@ -719,6 +719,32 @@
       <div class="sprint-title">Eval System — tested and documented</div>
       <div class="sprint-coming">Coming in Sprint 6</div>
     </div>
+  </div>
+</div>
+
+<!-- ── SECTION 5: SPRINT 2 ── -->
+<div class="section section-white">
+  <div class="section-label">Sprint 2 — April 2026</div>
+
+  <div class="insight">
+    <div class="insight-num">01</div>
+    <div class="insight-text"><strong>Kanban dashboard shipped.</strong> <code>ai-builder-dashboard.html</code> — 8 automation ideas as draggable cards across four columns: Suggested, To Build, In Progress, and Done. Each card opens a full project scope modal with outcome, trigger, tools, build steps, success metrics, and a direct link to the Notion spec page.</div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-num">02</div>
+    <div class="insight-text"><strong>Notion backend wired live.</strong> AI Automation Roadmap database is now the source of truth. Cards load from Notion on page load. Dragging a card to a new column PATCHes its Status in Notion in real time — no localStorage, no manual sync. Deployed to Vercel with environment variables secured.</div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-num">03</div>
+    <div class="insight-text"><strong>Automation advisor agent built.</strong> Reads the live roadmap and Claude Code session history, then outputs a 60-second briefing: top priorities, items needing definition, and one new automation idea to add to the Suggested column. Say "add to my roadmap" and it writes directly to Notion and the dashboard. Invoke with <code>/automation-advisor</code>.</div>
+  </div>
+
+  <div style="margin-top: 40px; display: flex; flex-wrap: wrap; gap: 24px; border-top: 1px solid var(--color-grey-mid); padding-top: 32px;">
+    <a href="https://ai-builder-ten-xi.vercel.app/time-audit.html" target="_blank" class="audit-link">Time Audit →</a>
+    <a href="https://ai-builder-ten-xi.vercel.app/ai-builder-plan.html" target="_blank" class="audit-link">Automation Plan →</a>
+    <a href="https://ai-builder-ten-xi.vercel.app/ai-builder-dashboard.html" target="_blank" class="audit-link">Live Dashboard →</a>
   </div>
 </div>
 
