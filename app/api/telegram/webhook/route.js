@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { parseFoodLog, parseWorkoutLog, detectIntent } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings } from '@/lib/notion'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan } from '@/lib/notion'
 import { getCheckinState, clearCheckinState, advanceCheckinState } from '@/lib/state'
 import { createCheckinResponse } from '@/lib/notion'
 
@@ -25,6 +25,25 @@ bot.on(message('text'), async (ctx) => {
   const checkinState = await getCheckinState(chatId)
   if (checkinState) {
     await handleCheckinReply(ctx, text, checkinState)
+    return
+  }
+
+  // Meal plan shortcut before intent detection
+  if (/meal plan|this week'?s? plan|what('?s| is) (my |the )?plan/i.test(text)) {
+    await ctx.sendChatAction('typing')
+    try {
+      const plan = await getCurrentMealPlan()
+      if (!plan) {
+        await ctx.reply("No meal plan yet for this week! It'll be sent automatically on your scheduled day.")
+        return
+      }
+      await ctx.reply(`🗓 <b>Your Meal Plan (week of ${plan.weekStart})</b>\n\n${plan.plan.slice(0, 3800)}`, { parse_mode: 'HTML' })
+      if (plan.groceryList) {
+        await ctx.reply(`🛒 <b>Grocery List</b>\n\n${plan.groceryList.slice(0, 3800)}`, { parse_mode: 'HTML' })
+      }
+    } catch {
+      await ctx.reply("Couldn't pull the meal plan right now — try again in a moment!")
+    }
     return
   }
 
