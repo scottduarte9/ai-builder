@@ -44,7 +44,7 @@ bot.on(message('text'), async (ctx) => {
       )
     } catch (err) {
       console.error('Food log error:', err)
-      await ctx.reply(`Debug error: ${err.message}`)
+      await ctx.reply("Hmm, I couldn't log that one. Try including the food and roughly how much — like '80g oatmeal with berries and a protein shake for breakfast'.")
     }
     return
   }
