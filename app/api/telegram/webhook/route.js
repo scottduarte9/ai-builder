@@ -1,20 +1,18 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
-import { parseFoodLog, parseWorkoutLog, detectIntent } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan } from '@/lib/notion'
+import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing } from '@/lib/claude'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses } from '@/lib/notion'
 import { getCheckinState, clearCheckinState, advanceCheckinState } from '@/lib/state'
-import { createCheckinResponse } from '@/lib/notion'
-
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
 bot.command('chatid', (ctx) => ctx.reply(`Your chat ID is: ${ctx.chat.id}`))
 
 const CHECKIN_QUESTIONS = [
-  'Did you stick to your meal plan this week?',
-  'How was your energy overall?',
-  'Any wins you want to celebrate?',
-  'Anything you want to do differently next week?',
-  'How are you feeling about your progress?',
+  "Walk me through your eating this week — did the meal plan feel doable, or did you find yourself veering off?",
+  "How's your energy been? Any patterns you noticed — times you felt great or dragged?",
+  "What went really well this week? I want to hear the wins, big or small.",
+  "Anything that felt hard or that you want to approach differently next week?",
+  "Stepping back — how do you feel about where you are right now? Physically, mentally, all of it.",
 ]
 
 // ── Text messages ──────────────────────────────────────────────────────────
@@ -148,18 +146,23 @@ async function handleCheckinReply(ctx, answer, state) {
   const { questionIndex, weekStart } = state
   const question = CHECKIN_QUESTIONS[questionIndex]
 
+  await ctx.sendChatAction('typing')
+  const nextIndex = questionIndex + 1
+  const isLast = nextIndex >= CHECKIN_QUESTIONS.length
+
   await createCheckinResponse({ weekStart, question, answer })
 
-  const nextIndex = questionIndex + 1
+  const coachResponse = await generateCheckinCoachResponse(question, answer)
 
-  if (nextIndex >= CHECKIN_QUESTIONS.length) {
+  if (isLast) {
     await clearCheckinState(ctx.chat.id)
-    await ctx.reply(
-      "That's all the questions! Thanks for checking in — you're doing great. I've saved all your responses 💚"
-    )
+    const allResponses = await getCheckinResponses(weekStart)
+    const closing = await generateCheckinClosing(allResponses)
+    await ctx.reply(coachResponse)
+    await ctx.reply(`💚 ${closing}`)
   } else {
     await advanceCheckinState(ctx.chat.id, nextIndex)
-    await ctx.reply(CHECKIN_QUESTIONS[nextIndex])
+    await ctx.reply(`${coachResponse}\n\n${CHECKIN_QUESTIONS[nextIndex]}`)
   }
 }
 
