@@ -2,6 +2,10 @@ import { getUserSettings, createMealPlan } from '@/lib/notion'
 import { generateMealPlan } from '@/lib/claude'
 import { sendMessage } from '@/lib/telegram'
 
+export async function GET(req) {
+  return POST(req)
+}
+
 export async function POST(req) {
   try {
     const settings = await getUserSettings()
