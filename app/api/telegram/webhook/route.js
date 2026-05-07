@@ -42,8 +42,9 @@ bot.on(message('text'), async (ctx) => {
         `Protein: ${parsed.protein}g · Carbs: ${parsed.carbs}g · Fat: ${parsed.fat}g · Calories: ${parsed.calories}`,
         { parse_mode: 'HTML' }
       )
-    } catch {
-      await ctx.reply("Hmm, I couldn't parse that one. Try describing what you ate a bit differently!")
+    } catch (err) {
+      console.error('Food log error:', err)
+      await ctx.reply(`Debug error: ${err.message}`)
     }
     return
   }
