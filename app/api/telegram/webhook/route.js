@@ -7,6 +7,8 @@ import { createCheckinResponse } from '@/lib/notion'
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
+bot.command('chatid', (ctx) => ctx.reply(`Your chat ID is: ${ctx.chat.id}`))
+
 const CHECKIN_QUESTIONS = [
   'Did you stick to your meal plan this week?',
   'How was your energy overall?',
