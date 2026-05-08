@@ -24,7 +24,7 @@ export default function LogFoodForm() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to log food')
-      setSuccess(`Logged: ${data.logged.description}`)
+      setSuccess(data.logged.description)
       setText('')
       router.refresh()
     } catch (err) {
@@ -35,26 +35,33 @@ export default function LogFoodForm() {
   }
 
   return (
-    <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 className="text-lg font-semibold mb-3">Log Food</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <div className="card flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">🥗</span>
+        <h2 className="section-title mb-0">Log Food</h2>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 flex-1">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. 2 eggs and toast with butter for breakfast"
-          className="border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+          placeholder="e.g. Greek yogurt with berries and granola for breakfast"
+          className="input-base focus:ring-emerald-400 resize-none flex-1 min-h-[80px]"
           rows={3}
         />
         <button
           type="submit"
-          disabled={loading}
-          className="bg-blue-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-blue-600 disabled:opacity-50 transition-colors"
+          disabled={loading || !text.trim()}
+          className="btn bg-emerald-500 text-white hover:bg-emerald-600 w-full"
         >
           {loading ? 'Logging…' : 'Log Food'}
         </button>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        {success && <p className="text-green-600 text-sm">{success}</p>}
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        {success && (
+          <p className="text-xs text-emerald-600 mt-1 flex items-start gap-1">
+            <span>✓</span> <span>Logged: {success}</span>
+          </p>
+        )}
       </form>
-    </section>
+    </div>
   )
 }

@@ -24,7 +24,7 @@ export default function LogWorkoutForm() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to log workout')
-      setSuccess(`Logged: ${data.logged.type} — ${data.logged.duration} mins`)
+      setSuccess(`${data.logged.type} — ${data.logged.duration} min`)
       setText('')
       router.refresh()
     } catch (err) {
@@ -35,26 +35,33 @@ export default function LogWorkoutForm() {
   }
 
   return (
-    <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 className="text-lg font-semibold mb-3">Log Workout</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+    <div className="card flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">🏃</span>
+        <h2 className="section-title mb-0">Log Workout</h2>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 flex-1">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. 45 min run at the park"
-          className="border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-green-400"
+          placeholder="e.g. 45 min yoga class this morning"
+          className="input-base focus:ring-sky-400 resize-none flex-1 min-h-[80px]"
           rows={3}
         />
         <button
           type="submit"
-          disabled={loading}
-          className="bg-green-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-green-600 disabled:opacity-50 transition-colors"
+          disabled={loading || !text.trim()}
+          className="btn bg-sky-500 text-white hover:bg-sky-600 w-full"
         >
           {loading ? 'Logging…' : 'Log Workout'}
         </button>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        {success && <p className="text-green-600 text-sm">{success}</p>}
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        {success && (
+          <p className="text-xs text-sky-600 mt-1 flex items-start gap-1">
+            <span>✓</span> <span>Logged: {success}</span>
+          </p>
+        )}
       </form>
-    </section>
+    </div>
   )
 }

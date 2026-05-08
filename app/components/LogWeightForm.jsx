@@ -24,7 +24,7 @@ export default function LogWeightForm() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to log weight')
-      setSuccess(`Logged ${weight} lbs`)
+      setSuccess(`${weight} lbs saved`)
       setWeight('')
       router.refresh()
     } catch (err) {
@@ -35,10 +35,13 @@ export default function LogWeightForm() {
   }
 
   return (
-    <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 className="text-lg font-semibold mb-3">Log Weight</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <div className="flex gap-2">
+    <div className="card flex flex-col">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">⚖️</span>
+        <h2 className="section-title mb-0">Log Weight</h2>
+      </div>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 flex-1">
+        <div className="relative flex-1 flex flex-col justify-center">
           <input
             type="number"
             step="0.1"
@@ -46,20 +49,24 @@ export default function LogWeightForm() {
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             placeholder="142.5"
-            className="flex-1 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="input-base focus:ring-violet-400 text-center text-2xl font-semibold pr-12"
           />
-          <span className="flex items-center text-gray-500 text-sm">lbs</span>
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-stone-400 font-medium">lbs</span>
         </div>
         <button
           type="submit"
-          disabled={loading}
-          className="bg-purple-500 text-white rounded-xl py-2 text-sm font-medium hover:bg-purple-600 disabled:opacity-50 transition-colors"
+          disabled={loading || !weight}
+          className="btn bg-violet-500 text-white hover:bg-violet-600 w-full"
         >
           {loading ? 'Saving…' : 'Log Weight'}
         </button>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
-        {success && <p className="text-green-600 text-sm">{success}</p>}
+        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        {success && (
+          <p className="text-xs text-violet-600 mt-1 flex items-start gap-1">
+            <span>✓</span> <span>{success}</span>
+          </p>
+        )}
       </form>
-    </section>
+    </div>
   )
 }
