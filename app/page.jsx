@@ -1,4 +1,4 @@
-import { getTodayFoodLogs, getUserSettings, getCurrentMealPlan, getRecentWorkouts } from '@/lib/notion'
+import { getTodayFoodLogs, getUserSettings, getCurrentMealPlan, getRecentWorkouts, getLikedMeals } from '@/lib/notion'
 import MacroProgress from '@/app/components/MacroProgress'
 import LogFoodForm from '@/app/components/LogFoodForm'
 import LogWorkoutForm from '@/app/components/LogWorkoutForm'
@@ -8,11 +8,12 @@ import WeightChart from '@/app/components/WeightChart'
 import RecentWorkouts from '@/app/components/RecentWorkouts'
 
 export default async function Dashboard() {
-  const [logs, settings, mealPlan, workouts] = await Promise.all([
+  const [logs, settings, mealPlan, workouts, likedMeals] = await Promise.all([
     getTodayFoodLogs(),
     getUserSettings(),
     getCurrentMealPlan(),
     getRecentWorkouts(5),
+    getLikedMeals(),
   ])
 
   const totals = logs.reduce(
@@ -63,7 +64,7 @@ export default async function Dashboard() {
           <LogWeightForm />
         </div>
 
-        <MealPlanDisplay initialPlan={mealPlan} />
+        <MealPlanDisplay initialPlan={mealPlan} initialLikedMeals={likedMeals} />
 
         <WeightChart />
 
