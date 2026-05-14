@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses } from '@/lib/notion'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog } from '@/lib/notion'
 import { getCheckinState, clearCheckinState, advanceCheckinState } from '@/lib/state'
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
@@ -25,6 +25,29 @@ bot.on(message('text'), async (ctx) => {
   const checkinState = await getCheckinState(chatId)
   if (checkinState) {
     await handleCheckinReply(ctx, text, checkinState)
+    return
+  }
+
+  // Check if we're awaiting a food quantity follow-up
+  const pendingFood = await getPendingFoodLog(chatId)
+  if (pendingFood) {
+    await ctx.sendChatAction('typing')
+    try {
+      const parsed = await parseFoodLog(`${pendingFood} ${text}`)
+      await clearPendingFoodLog(chatId)
+      const today = new Date().toISOString().split('T')[0]
+      await createFoodLog({ date: today, ...parsed })
+      await ctx.reply(
+        `Perfect, got it! Logged that ${parsed.meal.toLowerCase()} ✅\n\n` +
+        `📊 <b>${parsed.description}</b>\n` +
+        `Protein: ${parsed.protein}g · Carbs: ${parsed.carbs}g · Fat: ${parsed.fat}g · Calories: ${parsed.calories}`,
+        { parse_mode: 'HTML' }
+      )
+    } catch (err) {
+      console.error('Food log error (pending):', err)
+      await clearPendingFoodLog(chatId)
+      await ctx.reply("Couldn't process that — try logging the full meal again with weights.")
+    }
     return
   }
 
@@ -53,17 +76,22 @@ bot.on(message('text'), async (ctx) => {
     await ctx.sendChatAction('typing')
     try {
       const parsed = await parseFoodLog(text)
-      const today = new Date().toISOString().split('T')[0]
-      await createFoodLog({ date: today, ...parsed })
-      await ctx.reply(
-        `Nice! Logged that ${parsed.meal.toLowerCase()} ✅\n\n` +
-        `📊 <b>${parsed.description}</b>\n` +
-        `Protein: ${parsed.protein}g · Carbs: ${parsed.carbs}g · Fat: ${parsed.fat}g · Calories: ${parsed.calories}`,
-        { parse_mode: 'HTML' }
-      )
+      if (parsed.needsQuantity) {
+        await setPendingFoodLog(chatId, text)
+        await ctx.reply(parsed.followUp || "Can you give me the weights or portions? e.g. '150g chicken, 1 cup rice'")
+      } else {
+        const today = new Date().toISOString().split('T')[0]
+        await createFoodLog({ date: today, ...parsed })
+        await ctx.reply(
+          `Nice! Logged that ${parsed.meal.toLowerCase()} ✅\n\n` +
+          `📊 <b>${parsed.description}</b>\n` +
+          `Protein: ${parsed.protein}g · Carbs: ${parsed.carbs}g · Fat: ${parsed.fat}g · Calories: ${parsed.calories}`,
+          { parse_mode: 'HTML' }
+        )
+      }
     } catch (err) {
       console.error('Food log error:', err)
-      await ctx.reply("Hmm, I couldn't log that one. Try including the food and roughly how much — like '80g oatmeal with berries and a protein shake for breakfast'.")
+      await ctx.reply("Hmm, I couldn't log that one. Try including the food and weight — like '150g chicken breast, 1 cup rice for lunch'.")
     }
     return
   }

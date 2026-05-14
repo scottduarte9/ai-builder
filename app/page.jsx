@@ -59,7 +59,7 @@ export default async function Dashboard() {
         <MacroProgress totals={totals} targets={targets} />
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <LogFoodForm />
+          <LogFoodForm initialLogs={logs} />
           <LogWorkoutForm />
           <LogWeightForm />
         </div>

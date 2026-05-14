@@ -3,11 +3,16 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function LogFoodForm() {
+const MEAL_ICONS = { Breakfast: '🍳', Lunch: '🥗', Dinner: '🍽️', Snack: '🍎' }
+
+export default function LogFoodForm({ initialLogs = [] }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [editLoading, setEditLoading] = useState(false)
   const router = useRouter()
 
   async function handleSubmit(e) {
@@ -34,18 +39,48 @@ export default function LogFoodForm() {
     }
   }
 
+  function startEdit(log) {
+    setEditingId(log.id)
+    setEditForm({
+      description: log.description || '',
+      protein: log.protein,
+      carbs: log.carbs,
+      fat: log.fat,
+      calories: log.calories,
+    })
+  }
+
+  async function saveEdit(log) {
+    setEditLoading(true)
+    try {
+      const res = await fetch('/api/dashboard/log-food', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: log.id, ...editForm }),
+      })
+      if (!res.ok) throw new Error('Failed to update')
+      setEditingId(null)
+      router.refresh()
+    } catch {
+      // silent
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
   return (
     <div className="card flex flex-col">
       <div className="flex items-center gap-2 mb-4">
         <span className="text-lg">🥗</span>
         <h2 className="section-title mb-0">Log Food</h2>
       </div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3 flex-1">
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="e.g. Greek yogurt with berries and granola for breakfast"
-          className="input-base focus:ring-emerald-400 resize-none flex-1 min-h-[80px]"
+          placeholder="e.g. 150g chicken breast, 1 cup rice, side salad for lunch"
+          className="input-base focus:ring-emerald-400 resize-none min-h-[72px]"
           rows={3}
         />
         <button
@@ -55,13 +90,84 @@ export default function LogFoodForm() {
         >
           {loading ? 'Logging…' : 'Log Food'}
         </button>
-        {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        {error && <p className="text-xs text-red-500">{error}</p>}
         {success && (
-          <p className="text-xs text-emerald-600 mt-1 flex items-start gap-1">
-            <span>✓</span> <span>Logged: {success}</span>
+          <p className="text-xs text-emerald-600 flex items-start gap-1">
+            <span>✓</span><span>Logged: {success}</span>
           </p>
         )}
       </form>
+
+      {initialLogs.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Today's logs</p>
+          {initialLogs.map((log) => (
+            <div key={log.id} className="bg-stone-50 border border-stone-100 rounded-xl p-3">
+              {editingId === log.id ? (
+                <div className="space-y-2">
+                  <input
+                    className="input-base text-xs w-full"
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    placeholder="Description"
+                  />
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { key: 'protein', label: 'Protein' },
+                      { key: 'carbs', label: 'Carbs' },
+                      { key: 'fat', label: 'Fat' },
+                      { key: 'calories', label: 'Cal' },
+                    ].map(({ key, label }) => (
+                      <div key={key}>
+                        <label className="text-xs text-stone-400">{label}</label>
+                        <input
+                          type="number"
+                          className="input-base text-xs w-full mt-0.5 px-2 py-1"
+                          value={editForm[key]}
+                          onChange={(e) => setEditForm({ ...editForm, [key]: Number(e.target.value) })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => saveEdit(log)}
+                      disabled={editLoading}
+                      className="btn bg-emerald-500 text-white hover:bg-emerald-600 text-xs px-3 py-1.5"
+                    >
+                      {editLoading ? 'Saving…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="btn text-xs px-3 py-1.5"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2">
+                  <span className="text-base shrink-0 mt-0.5">{MEAL_ICONS[log.meal] || '🍴'}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">{log.meal}</p>
+                    <p className="text-sm text-gray-800 leading-snug">{log.description}</p>
+                    <p className="text-xs text-stone-400 mt-0.5">
+                      P: {log.protein}g · C: {log.carbs}g · F: {log.fat}g · {log.calories} cal
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => startEdit(log)}
+                    className="text-stone-300 hover:text-stone-500 transition-colors shrink-0 mt-0.5 text-sm"
+                    title="Edit entry"
+                  >
+                    ✏️
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

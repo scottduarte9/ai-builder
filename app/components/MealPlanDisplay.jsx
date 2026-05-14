@@ -68,6 +68,9 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
   const [error, setError] = useState(null)
   const [tab, setTab] = useState('plan')
   const [activeDay, setActiveDay] = useState(0)
+  const [aiInput, setAiInput] = useState('')
+  const [refining, setRefining] = useState(false)
+  const [refineError, setRefineError] = useState(null)
   const router = useRouter()
 
   const parsedDays = parseMealPlan(plan?.plan)
@@ -111,6 +114,31 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
 
   const savedList = initialLikedMeals.filter((m) => likedMeals.includes(m.name))
 
+  async function refinePlan(e) {
+    e.preventDefault()
+    if (!aiInput.trim() || !plan?.plan) return
+    setRefining(true)
+    setRefineError(null)
+    try {
+      const res = await fetch('/api/dashboard/meal-plan/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPlan: plan.plan, request: aiInput }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to refine plan')
+      setPlan({ plan: data.plan, groceryList: data.groceryList, weekStart: new Date().toISOString().split('T')[0] })
+      setAiInput('')
+      setActiveDay(0)
+      setTab('plan')
+      router.refresh()
+    } catch (err) {
+      setRefineError(err.message)
+    } finally {
+      setRefining(false)
+    }
+  }
+
   return (
     <div className="card">
       {/* Header */}
@@ -129,6 +157,33 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
       </div>
 
       {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
+
+      {/* AI Assistant Bar */}
+      <form onSubmit={refinePlan} className="mb-4">
+        <div className="flex gap-2 items-center p-2 bg-stone-50 border border-stone-200 rounded-xl focus-within:border-orange-300 transition-colors">
+          <span className="text-base shrink-0 pl-1">✨</span>
+          <input
+            type="text"
+            value={aiInput}
+            onChange={(e) => setAiInput(e.target.value)}
+            placeholder={plan ? "Tweak the plan — e.g. 'keep breakfasts the same' or 'swap Thursday dinner'" : "Generate a plan first, then ask me to tweak it"}
+            disabled={refining || !plan}
+            className="flex-1 bg-transparent text-sm text-gray-800 placeholder-stone-400 outline-none"
+          />
+          <button
+            type="submit"
+            disabled={refining || !aiInput.trim() || !plan}
+            className={`shrink-0 w-7 h-7 rounded-lg flex items-center justify-center transition-colors text-sm ${
+              aiInput.trim() && plan && !refining
+                ? 'bg-orange-500 text-white hover:bg-orange-600'
+                : 'bg-stone-200 text-stone-400'
+            }`}
+          >
+            {refining ? '…' : '↑'}
+          </button>
+        </div>
+        {refineError && <p className="text-xs text-red-500 mt-1.5">{refineError}</p>}
+      </form>
 
       {/* Top tab bar */}
       <div className="flex gap-1 p-1 bg-stone-100 rounded-xl mb-4 w-fit">
