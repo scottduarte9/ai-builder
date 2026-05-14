@@ -50,10 +50,13 @@ function parseMealPlan(text) {
       if (currentMeal) currentDay.meals.push(currentMeal)
       const type = mealMatch[1].toLowerCase()
       const title = line.slice(mealMatch[0].length).trim()
-      currentMeal = { type, icon: MEAL_ICONS[type] || '🍴', title, bullets: [] }
+      currentMeal = { type, icon: MEAL_ICONS[type] || '🍴', title, bullets: [], macros: null }
     } else if (currentMeal) {
       const bulletMatch = line.match(/^[-•]\s*(.+)/)
-      if (bulletMatch) {
+      const macroMatch = line.match(/^macros?\s*:/i)
+      if (macroMatch) {
+        currentMeal.macros = line.replace(/^macros?\s*:\s*/i, '').trim()
+      } else if (bulletMatch) {
         currentMeal.bullets.push(bulletMatch[1].trim())
       } else if (!currentMeal.bullets.length && line) {
         // pre-bullet continuation text (old format compat)
@@ -410,6 +413,11 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
                                     </li>
                                   ))}
                                 </ul>
+                              )}
+                              {meal.macros && (
+                                <p className="mt-2 text-xs font-medium text-stone-500 bg-stone-100 rounded-lg px-2.5 py-1 inline-block">
+                                  {meal.macros}
+                                </p>
                               )}
                             </div>
                             <HeartButton
