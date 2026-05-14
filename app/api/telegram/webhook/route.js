@@ -1,8 +1,9 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
-import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros } from '@/lib/notion'
-import { getCheckinState, clearCheckinState, advanceCheckinState } from '@/lib/state'
+import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing, generateMealPlan } from '@/lib/claude'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros, createMealPlan, getLikedMeals } from '@/lib/notion'
+import { getCheckinState, clearCheckinState, advanceCheckinState, getMealPlannerState, setMealPlannerState, clearMealPlannerState } from '@/lib/state'
+import { PLANNER_QUESTIONS, PLANNER_KEYS } from '@/app/api/webhooks/weekly-meal-plan/route'
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
 bot.command('chatid', (ctx) => ctx.reply(`Your chat ID is: ${ctx.chat.id}`))
@@ -21,7 +22,14 @@ bot.on(message('text'), async (ctx) => {
   const text = ctx.message.text.trim()
   const chatId = ctx.chat.id
 
-  // Check if we're mid check-in before doing anything else
+  // Check if we're mid meal plan planner
+  const plannerState = await getMealPlannerState(chatId)
+  if (plannerState) {
+    await handleMealPlannerReply(ctx, text, plannerState)
+    return
+  }
+
+  // Check if we're mid check-in
   const checkinState = await getCheckinState(chatId)
   if (checkinState) {
     await handleCheckinReply(ctx, text, checkinState)
@@ -174,6 +182,53 @@ bot.on(message('voice'), async (ctx) => {
     "I can hear you! Voice transcription is coming soon — for now, just type out what you had and I'll log it 😊"
   )
 })
+
+// ── Meal planner reply handler ─────────────────────────────────────────────
+
+async function handleMealPlannerReply(ctx, answer, state) {
+  const { questionIndex, responses } = state
+  const key = PLANNER_KEYS[questionIndex]
+  const updatedResponses = { ...responses, [key]: answer }
+  const nextIndex = questionIndex + 1
+  const isLast = nextIndex >= PLANNER_QUESTIONS.length
+
+  if (isLast) {
+    await clearMealPlannerState(ctx.chat.id)
+    await ctx.sendChatAction('typing')
+    await ctx.reply("Love it — give me a moment while I put your plan together 🗓✨")
+
+    try {
+      const [settings, likedMeals] = await Promise.all([getUserSettings(), getLikedMeals()])
+      const { plan, groceryList } = await generateMealPlan({
+        protein: settings.protein,
+        carbs: settings.carbs,
+        fat: settings.fat,
+        calories: settings.calories,
+        liked: settings.liked,
+        disliked: settings.disliked,
+        likedMeals,
+        weeklyContext: updatedResponses,
+      })
+
+      // weekStart = next Monday (this runs on Sunday)
+      const nextMonday = new Date()
+      nextMonday.setDate(nextMonday.getDate() + 1)
+      const weekStart = nextMonday.toISOString().split('T')[0]
+
+      await createMealPlan({ weekStart, plan, groceryList })
+      await ctx.reply(`🗓 <b>Your Meal Plan — week of ${weekStart}</b>\n\n${plan.slice(0, 3800)}`, { parse_mode: 'HTML' })
+      if (groceryList) {
+        await ctx.reply(`🛒 <b>Grocery List</b>\n\n${groceryList.slice(0, 3800)}`, { parse_mode: 'HTML' })
+      }
+    } catch (err) {
+      console.error('Meal plan generation error:', err)
+      await ctx.reply("Something went wrong generating the plan — you can always kick it off from the dashboard!")
+    }
+  } else {
+    await setMealPlannerState(ctx.chat.id, nextIndex, updatedResponses)
+    await ctx.reply(PLANNER_QUESTIONS[nextIndex], { parse_mode: 'HTML' })
+  }
+}
 
 // ── Check-in reply handler ─────────────────────────────────────────────────
 

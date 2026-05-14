@@ -1,38 +1,34 @@
-import { getUserSettings, createMealPlan } from '@/lib/notion'
-import { generateMealPlan } from '@/lib/claude'
+import { getUserSettings } from '@/lib/notion'
 import { sendMessage } from '@/lib/telegram'
+import { setMealPlannerState } from '@/lib/state'
+
+export const PLANNER_QUESTIONS = [
+  "What did you enjoy from last week's meal plan? 🌟",
+  "Anything you want to swap out or avoid this week?",
+  "Any foods or meals you've been thinking about or craving?",
+  "How's your schedule looking this week? Reply <b>busy</b>, <b>moderate</b>, or <b>relaxed</b>.",
+]
+
+export const PLANNER_KEYS = ['enjoyed', 'avoid', 'cravings', 'schedule']
 
 export async function GET(req) {
   return POST(req)
 }
 
-export async function POST(req) {
+export async function POST() {
   try {
     const settings = await getUserSettings()
-
-    const { plan, groceryList } = await generateMealPlan({
-      protein: settings.protein,
-      carbs: settings.carbs,
-      fat: settings.fat,
-      calories: settings.calories,
-      liked: settings.liked,
-      disliked: settings.disliked,
-    })
-
-    const weekStart = new Date().toISOString().split('T')[0]
-    await createMealPlan({ weekStart, plan, groceryList })
-
     const chatId = settings.telegramChatId || process.env.TELEGRAM_CHAT_ID
 
-    // Telegram has a 4096 char limit — send plan and grocery list as separate messages
-    await sendMessage(chatId, `🗓 <b>Your Meal Plan for the Week</b>\n\n${plan.slice(0, 3800)}`)
-    if (groceryList) {
-      await sendMessage(chatId, `🛒 <b>Grocery List</b>\n\n${groceryList.slice(0, 3800)}`)
-    }
+    await setMealPlannerState(chatId, 0, {})
+    await sendMessage(
+      chatId,
+      `🗓 <b>Time to plan this week's meals!</b>\n\nI've got 4 quick questions so I can build a plan that actually fits your week.\n\n${PLANNER_QUESTIONS[0]}`
+    )
 
     return Response.json({ ok: true })
   } catch (err) {
-    console.error('Meal plan error:', err)
+    console.error('Meal plan planner error:', err)
     return Response.json({ ok: false, error: err.message }, { status: 500 })
   }
 }
