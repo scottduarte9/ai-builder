@@ -49,10 +49,16 @@ function parseMealPlan(text) {
     if (mealMatch) {
       if (currentMeal) currentDay.meals.push(currentMeal)
       const type = mealMatch[1].toLowerCase()
-      const mealText = line.slice(mealMatch[0].length).trim()
-      currentMeal = { type, icon: MEAL_ICONS[type] || '🍴', text: mealText }
-    } else if (currentMeal && line) {
-      currentMeal.text += ' ' + line
+      const title = line.slice(mealMatch[0].length).trim()
+      currentMeal = { type, icon: MEAL_ICONS[type] || '🍴', title, bullets: [] }
+    } else if (currentMeal) {
+      const bulletMatch = line.match(/^[-•]\s*(.+)/)
+      if (bulletMatch) {
+        currentMeal.bullets.push(bulletMatch[1].trim())
+      } else if (!currentMeal.bullets.length && line) {
+        // pre-bullet continuation text (old format compat)
+        currentMeal.title += (currentMeal.title ? ' ' : '') + line
+      }
     }
   }
 
@@ -378,7 +384,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
                         {parsedDays[activeDay].day}
                       </p>
                       {parsedDays[activeDay].meals.map((meal, i) => {
-                        const key = meal.text.slice(0, 120)
+                        const key = meal.title.slice(0, 120)
                         const isLiked = likedMeals.includes(key)
                         return (
                           <div
@@ -389,10 +395,22 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
                           >
                             <span className="text-xl shrink-0 mt-0.5">{meal.icon}</span>
                             <div className="flex-1 min-w-0">
-                              <p className={`text-xs font-semibold uppercase tracking-wide mb-0.5 ${MEAL_LABEL_COLORS[meal.type] || 'text-stone-400'}`}>
+                              <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${MEAL_LABEL_COLORS[meal.type] || 'text-stone-400'}`}>
                                 {meal.type}
                               </p>
-                              <p className="text-sm text-gray-800 leading-snug">{meal.text}</p>
+                              {meal.title && (
+                                <p className="text-sm font-medium text-gray-800 leading-snug mb-1.5">{meal.title}</p>
+                              )}
+                              {meal.bullets.length > 0 && (
+                                <ul className="space-y-1">
+                                  {meal.bullets.map((b, j) => (
+                                    <li key={j} className="flex items-start gap-2 text-xs text-gray-600 leading-relaxed">
+                                      <span className="mt-1.5 w-1 h-1 rounded-full bg-stone-300 shrink-0" />
+                                      {b}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                             <HeartButton
                               mealText={key}
