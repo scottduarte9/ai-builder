@@ -22,30 +22,45 @@ const MEAL_LABEL_COLORS = {
 
 function parseMealPlan(text) {
   if (!text) return []
+  // Strip markdown: #, *, _, ` so "## **MONDAY**" → "MONDAY" and "**Breakfast:**" → "Breakfast:"
+  const clean = (s) => s.replace(/[#*_`]/g, '').replace(/\s+/g, ' ').trim()
   const days = []
-  const dayRegex = /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/im
-  const chunks = text.split(/\n(?=(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i)
-  for (const chunk of chunks) {
-    const lines = chunk.trim().split('\n')
-    const dayMatch = lines[0].match(dayRegex)
-    if (!dayMatch) continue
-    const day = dayMatch[0].charAt(0).toUpperCase() + dayMatch[0].slice(1).toLowerCase()
-    const meals = []
-    let current = null
-    for (const line of lines.slice(1)) {
-      const mealMatch = line.match(/^(breakfast|lunch|dinner|snack)[\s:]*/i)
-      if (mealMatch) {
-        if (current) meals.push(current)
-        const type = mealMatch[1].toLowerCase()
-        const text = line.slice(mealMatch[0].length).trim()
-        current = { type, icon: MEAL_ICONS[type] || '🍴', text }
-      } else if (current && line.trim()) {
-        current.text += ' ' + line.trim()
+  let currentDay = null
+  let currentMeal = null
+
+  for (const rawLine of text.split('\n')) {
+    const line = clean(rawLine)
+    if (!line) continue
+
+    const dayMatch = line.match(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i)
+    if (dayMatch) {
+      if (currentDay) {
+        if (currentMeal) { currentDay.meals.push(currentMeal); currentMeal = null }
+        if (currentDay.meals.length) days.push(currentDay)
       }
+      const name = dayMatch[1]
+      currentDay = { day: name.charAt(0).toUpperCase() + name.slice(1).toLowerCase(), meals: [] }
+      continue
     }
-    if (current) meals.push(current)
-    if (meals.length) days.push({ day, meals })
+
+    if (!currentDay) continue
+
+    const mealMatch = line.match(/^(breakfast|lunch|dinner|snack)\s*[:\-]?\s*/i)
+    if (mealMatch) {
+      if (currentMeal) currentDay.meals.push(currentMeal)
+      const type = mealMatch[1].toLowerCase()
+      const mealText = line.slice(mealMatch[0].length).trim()
+      currentMeal = { type, icon: MEAL_ICONS[type] || '🍴', text: mealText }
+    } else if (currentMeal && line) {
+      currentMeal.text += ' ' + line
+    }
   }
+
+  if (currentDay) {
+    if (currentMeal) currentDay.meals.push(currentMeal)
+    if (currentDay.meals.length) days.push(currentDay)
+  }
+
   return days
 }
 
