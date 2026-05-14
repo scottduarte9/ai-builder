@@ -4,6 +4,7 @@
     { "path": "/api/webhooks/daily-affirmation", "schedule": "0 14 * * *" },
     { "path": "/api/webhooks/weigh-in-prompt",   "schedule": "30 14 * * 1" },
     { "path": "/api/webhooks/weekly-meal-plan",  "schedule": "0 1 * * 1" },
-    { "path": "/api/webhooks/weekly-checkin",    "schedule": "0 17 * * 0" }
+    { "path": "/api/webhooks/weekly-checkin",    "schedule": "0 17 * * 0" },
+    { "path": "/api/webhooks/log-nudge",         "schedule": "0 21 * * *" }
   ]
 }

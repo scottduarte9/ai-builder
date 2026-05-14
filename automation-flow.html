@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wellness App — Automation Flows</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1b26;
+    font-family: -apple-system, 'SF Pro Text', 'Inter', sans-serif;
+    color: #e2e8f0;
+    padding: 48px 40px 80px;
+    min-height: 100vh;
+  }
+
+  /* Page header */
+  .page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #2d2f40;
+  }
+  .page-title { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+  .page-sub { font-size: 13px; color: #64748b; margin-top: 4px; }
+  .status-badge {
+    background: #0f2a1a;
+    border: 1px solid #166534;
+    color: #4ade80;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 7px; height: 7px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Workflow section */
+  .workflow {
+    margin-bottom: 40px;
+    background: #1e2030;
+    border: 1px solid #2d2f40;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .workflow-header {
+    padding: 16px 24px;
+    background: #252736;
+    border-bottom: 1px solid #2d2f40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .workflow-name { font-size: 14px; font-weight: 600; color: #f1f5f9; display: flex; align-items: center; gap: 8px; }
+  .workflow-schedule {
+    font-size: 11px;
+    color: #94a3b8;
+    background: #1e2030;
+    border: 1px solid #3d4058;
+    padding: 3px 10px;
+    border-radius: 8px;
+  }
+
+  .workflow-canvas {
+    padding: 28px 24px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+    min-height: 110px;
+  }
+
+  /* Node */
+  .node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .node-box {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    border: 2px solid transparent;
+    position: relative;
+    transition: transform 0.15s;
+    cursor: default;
+  }
+  .node-box:hover { transform: translateY(-2px); }
+
+  .node-label {
+    font-size: 11px;
+    color: #94a3b8;
+    text-align: center;
+    max-width: 80px;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  /* Node types */
+  .node-trigger .node-box  { background: #2d1b69; border-color: #7c3aed; }
+  .node-telegram .node-box { background: #0c2a4a; border-color: #0ea5e9; }
+  .node-claude .node-box   { background: #2d1f0a; border-color: #f59e0b; }
+  .node-notion .node-box   { background: #0f1f2d; border-color: #38bdf8; }
+  .node-logic .node-box    { background: #1a2d1a; border-color: #22c55e; }
+  .node-vercel .node-box   { background: #1f1f1f; border-color: #e2e8f0; }
+
+  .node-type-tag {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .node-trigger .node-type-tag  { background: #7c3aed; color: white; }
+  .node-telegram .node-type-tag { background: #0ea5e9; color: white; }
+  .node-claude .node-type-tag   { background: #f59e0b; color: #1a1a1a; }
+  .node-notion .node-type-tag   { background: #38bdf8; color: #0c1a24; }
+  .node-logic .node-type-tag    { background: #22c55e; color: #0a1a0a; }
+  .node-vercel .node-type-tag   { background: #e2e8f0; color: #1a1a1a; }
+
+  /* Arrow */
+  .arrow {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0 4px;
+    margin-bottom: 20px;
+  }
+  .arrow-line {
+    height: 2px;
+    width: 36px;
+    background: linear-gradient(to right, #3d4058, #4d5070);
+    position: relative;
+  }
+  .arrow-line::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #4d5070;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  /* Split arrow (for parallel outputs) */
+  .split-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-bottom: 20px;
+    margin: 0 4px 20px;
+  }
+  .split-row { display: flex; align-items: center; }
+  .split-line {
+    height: 2px;
+    width: 36px;
+    background: linear-gradient(to right, #3d4058, #4d5070);
+    position: relative;
+  }
+  .split-line::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid #4d5070;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+  .split-nodes { display: flex; flex-direction: column; gap: 10px; }
+
+  /* Branch node (for IF logic) */
+  .branch-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .branch-row { display: flex; align-items: center; gap: 0; }
+  .branch-label {
+    font-size: 10px;
+    color: #4ade80;
+    font-weight: 600;
+    margin-right: 6px;
+    width: 24px;
+    text-align: right;
+  }
+  .branch-label.no { color: #f87171; }
+
+  /* Section label */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+    margin-top: 40px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after { content:''; flex:1; height:1px; background:#2d2f40; }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid #2d2f40;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #64748b;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 4px;
+    border: 2px solid;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div>
+    <div class="page-title">Wellness App — Automation Flows</div>
+    <div class="page-sub">5 active workflows · Vercel serverless · Triggered by schedule or Telegram message</div>
+  </div>
+  <div class="status-badge"><div class="dot"></div> All workflows active</div>
+</div>
+
+<!-- ── SCHEDULED AUTOMATIONS ──────────────────────────── -->
+<div class="section-label">Scheduled Automations</div>
+
+<!-- Daily Affirmation -->
+<div class="workflow">
+  <div class="workflow-header">
+    <div class="workflow-name">🌟 Daily Affirmation</div>
+    <div class="workflow-schedule">Every day at 8:00 AM</div>
+  </div>
+  <div class="workflow-canvas">
+
+    <div class="node node-trigger">
+      <div class="node-box">⏰<div class="node-type-tag">Schedule</div></div>
+      <div class="node-label">8:00 AM Daily</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-notion">
+      <div class="node-box">📋<div class="node-type-tag">Notion</div></div>
+      <div class="node-label">Get Today's Food Logs</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-claude">
+      <div class="node-box">🤖<div class="node-type-tag">Claude AI</div></div>
+      <div class="node-label">Generate Affirmation</div>
+    </div>
+
+    <!-- Split to 2 outputs -->
+    <div class="split-container">
+      <div class="split-row"><div class="split-line"></div></div>
+      <div class="split-row"><div class="split-line"></div></div>
+    </div>
+    <div class="split-nodes">
+      <div class="node node-notion" style="margin-bottom:0">
+        <div class="node-box" style="width:64px;height:64px;font-size:22px">📋<div class="node-type-tag">Notion</div></div>
+        <div class="node-label">Save Affirmation</div>
+      </div>
+      <div class="node node-telegram" style="margin-top:0">
+        <div class="node-box" style="width:64px;height:64px;font-size:22px">✈️<div class="node-type-tag">Telegram</div></div>
+        <div class="node-label">Send to Phone</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Weigh-In Prompt -->
+<div class="workflow">
+  <div class="workflow-header">
+    <div class="workflow-name">⚖️ Weigh-In Reminder</div>
+    <div class="workflow-schedule">Every Monday at 8:00 AM</div>
+  </div>
+  <div class="workflow-canvas">
+
+    <div class="node node-trigger">
+      <div class="node-box">⏰<div class="node-type-tag">Schedule</div></div>
+      <div class="node-label">Monday 8:00 AM</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-notion">
+      <div class="node-box">📋<div class="node-type-tag">Notion</div></div>
+      <div class="node-label">Get User Settings</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-telegram">
+      <div class="node-box">✈️<div class="node-type-tag">Telegram</div></div>
+      <div class="node-label">Send Weigh-In Prompt</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Weekly Meal Plan -->
+<div class="workflow">
+  <div class="workflow-header">
+    <div class="workflow-name">🗓 Weekly Meal Plan</div>
+    <div class="workflow-schedule">Every Sunday at 9:00 PM</div>
+  </div>
+  <div class="workflow-canvas">
+
+    <div class="node node-trigger">
+      <div class="node-box">⏰<div class="node-type-tag">Schedule</div></div>
+      <div class="node-label">Sunday 9:00 PM</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-notion">
+      <div class="node-box">📋<div class="node-type-tag">Notion</div></div>
+      <div class="node-label">Get Settings + Saved Meals</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-claude">
+      <div class="node-box">🤖<div class="node-type-tag">Claude AI</div></div>
+      <div class="node-label">Generate 7-Day Plan + Grocery List</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-notion">
+      <div class="node-box">📋<div class="node-type-tag">Notion</div></div>
+      <div class="node-label">Save Meal Plan</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-telegram">
+      <div class="node-box">✈️<div class="node-type-tag">Telegram</div></div>
+      <div class="node-label">Send Full Plan to Phone</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Weekly Check-In -->
+<div class="workflow">
+  <div class="workflow-header">
+    <div class="workflow-name">💚 Weekly Check-In</div>
+    <div class="workflow-schedule">Every Sunday at 7:00 PM</div>
+  </div>
+  <div class="workflow-canvas">
+
+    <div class="node node-trigger">
+      <div class="node-box">⏰<div class="node-type-tag">Schedule</div></div>
+      <div class="node-label">Sunday 7:00 PM</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-telegram">
+      <div class="node-box">✈️<div class="node-type-tag">Telegram</div></div>
+      <div class="node-label">Send Opening + Q1</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-telegram">
+      <div class="node-box">💬<div class="node-type-tag">Telegram</div></div>
+      <div class="node-label">Receive Reply</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-claude">
+      <div class="node-box">🤖<div class="node-type-tag">Claude AI</div></div>
+      <div class="node-label">Coach Response</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-notion">
+      <div class="node-box">📋<div class="node-type-tag">Notion</div></div>
+      <div class="node-label">Save Answer</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-logic">
+      <div class="node-box">⚡<div class="node-type-tag">Logic</div></div>
+      <div class="node-label">More Questions?</div>
+    </div>
+
+    <div class="split-container" style="margin-bottom:20px">
+      <div class="branch-row">
+        <div class="branch-label">Yes</div>
+        <div class="split-line"></div>
+      </div>
+      <div class="branch-row">
+        <div class="branch-label no">No</div>
+        <div class="split-line"></div>
+      </div>
+    </div>
+    <div class="split-nodes">
+      <div class="node node-telegram">
+        <div class="node-box" style="width:64px;height:64px;font-size:22px">✈️<div class="node-type-tag">Telegram</div></div>
+        <div class="node-label">Next Question</div>
+      </div>
+      <div class="node node-claude">
+        <div class="node-box" style="width:64px;height:64px;font-size:22px">🤖<div class="node-type-tag">Claude AI</div></div>
+        <div class="node-label">Closing Reflection</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── REAL-TIME LOGGING ───────────────────────────────── -->
+<div class="section-label">Real-Time Logging (Telegram → Dashboard)</div>
+
+<!-- Food / Workout / Weight Logging -->
+<div class="workflow">
+  <div class="workflow-header">
+    <div class="workflow-name">📲 Message Logging — Food · Workout · Weight</div>
+    <div class="workflow-schedule">Triggered instantly on every Telegram message</div>
+  </div>
+  <div class="workflow-canvas">
+
+    <div class="node node-telegram">
+      <div class="node-box">💬<div class="node-type-tag">Telegram</div></div>
+      <div class="node-label">Incoming Message</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-claude">
+      <div class="node-box">🤖<div class="node-type-tag">Claude AI</div></div>
+      <div class="node-label">Detect Intent</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-logic">
+      <div class="node-box">⚡<div class="node-type-tag">Router</div></div>
+      <div class="node-label">Route by Type</div>
+    </div>
+
+    <div class="split-container" style="gap:14px; margin-bottom:20px">
+      <div class="branch-row"><div class="branch-label" style="color:#fb923c;width:36px">Food</div><div class="split-line"></div></div>
+      <div class="branch-row"><div class="branch-label" style="color:#38bdf8;width:36px">Workout</div><div class="split-line"></div></div>
+      <div class="branch-row"><div class="branch-label" style="color:#a78bfa;width:36px">Weight</div><div class="split-line"></div></div>
+    </div>
+
+    <div class="split-nodes" style="gap:14px">
+      <div class="node node-claude">
+        <div class="node-box" style="width:60px;height:60px;font-size:20px">🤖<div class="node-type-tag">Claude AI</div></div>
+        <div class="node-label">Parse + Estimate Macros</div>
+      </div>
+      <div class="node node-claude">
+        <div class="node-box" style="width:60px;height:60px;font-size:20px">🤖<div class="node-type-tag">Claude AI</div></div>
+        <div class="node-label">Parse Type + Duration</div>
+      </div>
+      <div class="node node-vercel">
+        <div class="node-box" style="width:60px;height:60px;font-size:20px">🔢<div class="node-type-tag">Vercel</div></div>
+        <div class="node-label">Extract Weight</div>
+      </div>
+    </div>
+
+    <div class="split-container" style="gap:14px; margin-bottom:20px">
+      <div class="split-row"><div class="split-line"></div></div>
+      <div class="split-row"><div class="split-line"></div></div>
+      <div class="split-row"><div class="split-line"></div></div>
+    </div>
+
+    <div class="node node-notion">
+      <div class="node-box">📋<div class="node-type-tag">Notion</div></div>
+      <div class="node-label">Save Log to Database</div>
+    </div>
+    <div class="arrow"><div class="arrow-line"></div></div>
+
+    <div class="node node-telegram">
+      <div class="node-box">✅<div class="node-type-tag">Telegram</div></div>
+      <div class="node-label">Confirm + Show Macros</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div style="font-size:12px;color:#475569;font-weight:600;width:100%;margin-bottom:4px">Node Types</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#7c3aed;background:#2d1b69"></div> Schedule Trigger</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#0ea5e9;background:#0c2a4a"></div> Telegram</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#f59e0b;background:#2d1f0a"></div> Claude AI</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#38bdf8;background:#0f1f2d"></div> Notion Database</div>
+  <div class="legend-item"><div class="legend-dot" style="border-color:#22c55e;background:#1a2d1a"></div> Logic / Router</div>
+</div>
+
+</body>
+</html>

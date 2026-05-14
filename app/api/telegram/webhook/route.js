@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog } from '@/lib/notion'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros } from '@/lib/notion'
 import { getCheckinState, clearCheckinState, advanceCheckinState } from '@/lib/state'
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
 
@@ -117,6 +117,13 @@ bot.on(message('text'), async (ctx) => {
       const today = new Date().toISOString().split('T')[0]
       await createWeightLog({ date: today, weight })
       await ctx.reply(`Got it — logged ${weight} lbs for today. Keep going! 🌟`)
+      const recalibrated = await checkAndRecalibrateMacros(weight)
+      if (recalibrated) {
+        await ctx.reply(
+          `🎉 You've lost 5+ lbs since your last target update! Your daily targets have been adjusted:\n\n` +
+          `Calories: ${recalibrated.calories}\nProtein: ${recalibrated.protein}g\nCarbs: ${recalibrated.carbs}g\nFat: ${recalibrated.fat}g`
+        )
+      }
     } else {
       await ctx.reply("I couldn't find a number in that. Try something like '142.5 lbs'.")
     }

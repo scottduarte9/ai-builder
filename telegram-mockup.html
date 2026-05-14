@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Mockups</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 60px;
+    padding: 60px 40px;
+  }
+
+  .label {
+    color: #888;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  /* Phone frame */
+  .phone {
+    width: 375px;
+    border-radius: 44px;
+    background: #000;
+    padding: 12px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12);
+  }
+
+  .phone-inner {
+    border-radius: 34px;
+    overflow: hidden;
+    background: #efeae2;
+  }
+
+  /* Status bar */
+  .status-bar {
+    background: #5fb8d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px 8px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+
+  /* Chat header */
+  .chat-header {
+    background: #5fb8d4;
+    padding: 8px 16px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .back-btn {
+    color: white;
+    font-size: 17px;
+    opacity: 0.9;
+    margin-right: 2px;
+  }
+
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a8edea, #fed6e3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .header-info { flex: 1; }
+  .header-name { color: white; font-size: 16px; font-weight: 600; }
+  .header-sub { color: rgba(255,255,255,0.75); font-size: 12px; margin-top: 1px; }
+
+  .header-icons { display: flex; gap: 14px; }
+  .header-icon { color: white; font-size: 18px; opacity: 0.85; }
+
+  /* Chat body */
+  .chat-body {
+    background: #efeae2;
+    min-height: 480px;
+    padding: 10px 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .date-divider {
+    text-align: center;
+    margin: 8px 0;
+  }
+
+  .date-divider span {
+    background: rgba(0,0,0,0.18);
+    color: white;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 8px;
+  }
+
+  /* Messages */
+  .msg-row {
+    display: flex;
+    margin-bottom: 2px;
+  }
+
+  .msg-row.received { justify-content: flex-start; }
+  .msg-row.sent { justify-content: flex-end; }
+
+  .bubble {
+    max-width: 80%;
+    padding: 8px 10px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.45;
+    position: relative;
+    word-break: break-word;
+  }
+
+  .received .bubble {
+    background: white;
+    border-bottom-left-radius: 4px;
+    color: #111;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .sent .bubble {
+    background: #dcf8c6;
+    border-bottom-right-radius: 4px;
+    color: #111;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .time {
+    font-size: 10px;
+    color: #999;
+    margin-top: 3px;
+    display: block;
+    text-align: right;
+  }
+
+  .sent .time { color: #7fba6a; }
+
+  .check { font-size: 9px; }
+
+  /* Input bar */
+  .input-bar {
+    background: #f0f0f0;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .input-field {
+    flex: 1;
+    background: white;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 14px;
+    color: #aaa;
+    border: none;
+  }
+
+  .mic-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #5fb8d4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* Home indicator */
+  .home-indicator {
+    background: #000;
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+  }
+  .home-bar {
+    width: 130px;
+    height: 5px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── AFFIRMATION ─────────────────────────────────── -->
+<div>
+  <div class="label">Daily Affirmation</div>
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-icons">
+          <span>●●●</span>
+          <span>WiFi</span>
+          <span>🔋</span>
+        </div>
+      </div>
+      <div class="chat-header">
+        <div class="back-btn">‹</div>
+        <div class="avatar">🌿</div>
+        <div class="header-info">
+          <div class="header-name">Wellness Bot</div>
+          <div class="header-sub">bot</div>
+        </div>
+        <div class="header-icons">
+          <span class="header-icon">📞</span>
+          <span class="header-icon">⋮</span>
+        </div>
+      </div>
+      <div class="chat-body">
+        <div class="date-divider"><span>Today</span></div>
+
+        <div class="msg-row received">
+          <div class="bubble">
+            🌟 You've been showing up for yourself consistently this week — and that kind of quiet dedication is exactly what creates real, lasting change. The fact that you're tracking your meals and staying mindful of your macros isn't just about the numbers, it's a reflection of how much you value feeling your best. Keep going — you're building something meaningful here.
+            <span class="time">8:00 AM</span>
+          </div>
+        </div>
+      </div>
+      <div class="input-bar">
+        <div class="input-field">Message</div>
+        <div class="mic-btn">🎤</div>
+      </div>
+      <div class="home-indicator"><div class="home-bar"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOD LOG ─────────────────────────────────────── -->
+<div>
+  <div class="label">Food Logging</div>
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-icons">
+          <span>●●●</span>
+          <span>WiFi</span>
+          <span>🔋</span>
+        </div>
+      </div>
+      <div class="chat-header">
+        <div class="back-btn">‹</div>
+        <div class="avatar">🌿</div>
+        <div class="header-info">
+          <div class="header-name">Wellness Bot</div>
+          <div class="header-sub">bot</div>
+        </div>
+        <div class="header-icons">
+          <span class="header-icon">📞</span>
+          <span class="header-icon">⋮</span>
+        </div>
+      </div>
+      <div class="chat-body">
+        <div class="date-divider"><span>Today</span></div>
+
+        <div class="msg-row sent">
+          <div class="bubble">
+            Had 2 scrambled eggs with spinach and a slice of whole wheat toast for breakfast
+            <span class="time">8:14 AM <span class="check">✓✓</span></span>
+          </div>
+        </div>
+
+        <div class="msg-row received">
+          <div class="bubble">
+            ✅ <strong>Breakfast logged!</strong><br><br>
+            Scrambled eggs with spinach &amp; whole wheat toast<br><br>
+            🥚 Protein: 22g<br>
+            🌾 Carbs: 20g<br>
+            🧈 Fat: 13g<br>
+            🔥 281 calories<br><br>
+            You've got 128g protein left for the day — great start!
+            <span class="time">8:14 AM</span>
+          </div>
+        </div>
+      </div>
+      <div class="input-bar">
+        <div class="input-field">Message</div>
+        <div class="mic-btn">🎤</div>
+      </div>
+      <div class="home-indicator"><div class="home-bar"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── WEEKLY CHECK-IN ──────────────────────────────── -->
+<div>
+  <div class="label">Weekly Check-In</div>
+  <div class="phone">
+    <div class="phone-inner">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="status-icons">
+          <span>●●●</span>
+          <span>WiFi</span>
+          <span>🔋</span>
+        </div>
+      </div>
+      <div class="chat-header">
+        <div class="back-btn">‹</div>
+        <div class="avatar">🌿</div>
+        <div class="header-info">
+          <div class="header-name">Wellness Bot</div>
+          <div class="header-sub">bot</div>
+        </div>
+        <div class="header-icons">
+          <span class="header-icon">📞</span>
+          <span class="header-icon">⋮</span>
+        </div>
+      </div>
+      <div class="chat-body">
+        <div class="date-divider"><span>Sunday</span></div>
+
+        <div class="msg-row received">
+          <div class="bubble">
+            Hey! Time for your weekly check-in 💚 Let's take a few minutes to see how your week went — I'll ask you a few things, just answer however feels right.<br><br>
+            Walk me through your eating this week — did the meal plan feel doable, or did you find yourself veering off?
+            <span class="time">7:00 PM</span>
+          </div>
+        </div>
+
+        <div class="msg-row sent">
+          <div class="bubble">
+            Mostly stuck to it! Wednesday was harder but overall pretty solid
+            <span class="time">7:03 PM <span class="check">✓✓</span></span>
+          </div>
+        </div>
+
+        <div class="msg-row received">
+          <div class="bubble">
+            A strong week with one harder day in the middle is actually really normal — and honestly, navigating Wednesday without completely going off track shows a lot of resilience. That kind of consistency over perfection is exactly what leads to real progress.<br><br>
+            How's your energy been? Any patterns you noticed — times you felt great or dragged?
+            <span class="time">7:03 PM</span>
+          </div>
+        </div>
+
+        <div class="msg-row sent">
+          <div class="bubble">
+            Good in the mornings, always crash after lunch though
+            <span class="time">7:05 PM <span class="check">✓✓</span></span>
+          </div>
+        </div>
+
+        <div class="msg-row received">
+          <div class="bubble">
+            That post-lunch dip is really common and usually comes down to the carb-to-protein ratio at midday — it's worth paying attention to what your lunches look like on those crash days. The fact that your mornings feel strong is a great sign your body is responding well to your eating patterns.<br><br>
+            What went really well this week? I want to hear the wins, big or small.
+            <span class="time">7:05 PM</span>
+          </div>
+        </div>
+      </div>
+      <div class="input-bar">
+        <div class="input-field">Message</div>
+        <div class="mic-btn">🎤</div>
+      </div>
+      <div class="home-indicator"><div class="home-bar"></div></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
