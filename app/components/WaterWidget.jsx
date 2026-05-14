@@ -2,9 +2,14 @@
 
 import { useState, useEffect } from 'react'
 
-const GOAL_OZ = 64
-const GLASS_OZ = 8
-const GLASSES = GOAL_OZ / GLASS_OZ
+// Recommendation: weight(lbs)/2 + 16oz breastfeeding bonus ≈ 114oz → rounded to 110oz
+const GOAL_OZ = 110
+
+const INCREMENTS = [
+  { label: '+8 oz', oz: 8, icon: '🥃' },
+  { label: '+16 oz', oz: 16, icon: '🥤' },
+  { label: '+32 oz', oz: 32, icon: '🍶' },
+]
 
 export default function WaterWidget() {
   const [totalOz, setTotalOz] = useState(0)
@@ -17,14 +22,14 @@ export default function WaterWidget() {
       .catch(() => {})
   }, [])
 
-  async function addGlass() {
+  async function addWater(oz) {
     if (loading) return
     setLoading(true)
     try {
       const res = await fetch('/api/dashboard/water', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ oz: GLASS_OZ }),
+        body: JSON.stringify({ oz }),
       })
       const data = await res.json()
       if (data.totalOz != null) setTotalOz(data.totalOz)
@@ -32,8 +37,8 @@ export default function WaterWidget() {
     finally { setLoading(false) }
   }
 
-  const filledGlasses = Math.min(Math.round(totalOz / GLASS_OZ), GLASSES)
   const pct = Math.min(Math.round((totalOz / GOAL_OZ) * 100), 100)
+  const done = totalOz >= GOAL_OZ
 
   return (
     <div className="card">
@@ -42,37 +47,35 @@ export default function WaterWidget() {
           <span className="text-lg">💧</span>
           <h2 className="section-title mb-0">Water</h2>
         </div>
-        <span className="text-xs text-stone-400">{filledGlasses} / {GLASSES} glasses</span>
+        <div className="text-right">
+          <span className="text-sm font-semibold text-gray-800">{totalOz}</span>
+          <span className="text-xs text-stone-400"> / {GOAL_OZ} oz</span>
+        </div>
       </div>
 
-      <div className="w-full bg-stone-100 rounded-full h-1.5 mb-4">
+      <div className="w-full bg-stone-100 rounded-full h-2 mb-1">
         <div
-          className="bg-blue-400 h-1.5 rounded-full transition-all duration-500"
+          className={`h-2 rounded-full transition-all duration-500 ${done ? 'bg-blue-500' : 'bg-blue-300'}`}
           style={{ width: `${pct}%` }}
         />
       </div>
+      <p className="text-xs text-stone-400 mb-4">
+        {done ? '🎉 Goal reached!' : `${GOAL_OZ - totalOz} oz to go · Based on your weight + breastfeeding`}
+      </p>
 
-      <div className="flex gap-1.5">
-        {Array.from({ length: GLASSES }).map((_, i) => (
+      <div className="flex gap-2">
+        {INCREMENTS.map(({ label, oz, icon }) => (
           <button
-            key={i}
-            onClick={addGlass}
-            disabled={loading || i < filledGlasses}
-            className={`flex-1 h-8 rounded-lg text-base transition-all ${
-              i < filledGlasses
-                ? 'bg-blue-100 text-blue-400 cursor-default'
-                : 'bg-stone-100 text-stone-300 hover:bg-blue-50 hover:text-blue-400 active:scale-95'
-            }`}
-            title={i < filledGlasses ? 'Logged' : '+8 oz'}
+            key={oz}
+            onClick={() => addWater(oz)}
+            disabled={loading}
+            className="flex-1 flex flex-col items-center gap-1 py-2.5 bg-stone-50 border border-stone-200 rounded-xl text-xs font-medium text-stone-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 active:scale-95 transition-all disabled:opacity-50"
           >
-            {i < filledGlasses ? '💧' : '○'}
+            <span className="text-base">{icon}</span>
+            {label}
           </button>
         ))}
       </div>
-
-      {totalOz >= GOAL_OZ && (
-        <p className="text-xs text-blue-500 text-center mt-3">Goal reached! 💙</p>
-      )}
     </div>
   )
 }

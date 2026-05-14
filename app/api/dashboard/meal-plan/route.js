@@ -10,8 +10,10 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req) {
   try {
+    let weeklyContext = {}
+    try { weeklyContext = (await req.json()).weeklyContext ?? {} } catch {}
     const [settings, likedMeals] = await Promise.all([getUserSettings(), getLikedMeals()])
     const weekStart = new Date().toISOString().split('T')[0]
     const { plan, groceryList } = await generateMealPlan({
@@ -22,6 +24,7 @@ export async function POST() {
       liked: settings.liked,
       disliked: settings.disliked,
       likedMeals,
+      weeklyContext,
     })
     await createMealPlan({ weekStart, plan, groceryList })
     return Response.json({ ok: true, plan, groceryList })
