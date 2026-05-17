@@ -401,10 +401,11 @@ function PlannerForm({ onGenerate, generating }) {
   const [form, setForm] = useState({ enjoyed: '', avoid: '', cravings: '', schedule: 'moderate' })
   const [variety, setVariety] = useState({ breakfast: 2, lunch: 3, dinner: 3, snack: 2 })
   const [selectedTemplates, setSelectedTemplates] = useState([])
+  const [recipeIdeas, setRecipeIdeas] = useState('')
 
   function handleSubmit(e) {
     e.preventDefault()
-    onGenerate({ ...form, mealVariety: variety, selectedTemplates })
+    onGenerate({ ...form, mealVariety: variety, selectedTemplates, recipeIdeas })
   }
 
   return (
@@ -497,6 +498,21 @@ function PlannerForm({ onGenerate, generating }) {
               ))}
             </div>
             <p className="text-xs text-stone-300 mt-2 text-center">Recipes repeat across the week — lower = more repetition</p>
+          </div>
+
+          {/* Recipe inspiration */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">
+              Any meals you'd like to try this week? 💡
+            </label>
+            <textarea
+              value={recipeIdeas}
+              onChange={(e) => setRecipeIdeas(e.target.value)}
+              placeholder="e.g. Could you try to make one of the dinners a chicken bacon ranch bake variation?"
+              className="input-base resize-none text-sm min-h-[60px] bg-white"
+              rows={2}
+            />
+            <p className="text-xs text-stone-300 mt-1">Claude will build a macro-friendly version of whatever you describe.</p>
           </div>
 
           {/* Template picker */}

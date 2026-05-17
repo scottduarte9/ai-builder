@@ -28,6 +28,8 @@ export async function POST(req) {
       const body = await req.json()
       weeklyContext = body.weeklyContext ?? {}
       console.log('[meal-plan POST] selectedTemplates:', JSON.stringify(weeklyContext.selectedTemplates ?? []))
+      console.log('[meal-plan POST] mealVariety:', JSON.stringify(weeklyContext.mealVariety ?? {}))
+      console.log('[meal-plan POST] recipeIdeas:', weeklyContext.recipeIdeas ?? '')
     } catch (e) {
       console.error('[meal-plan POST] failed to parse body:', e)
     }
