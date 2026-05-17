@@ -19,6 +19,9 @@ const MEAL_LABEL_COLORS = {
   dinner: 'text-indigo-600',
   snack: 'text-rose-500',
 }
+const MEAL_TYPES_DISPLAY = ['Breakfast', 'Lunch', 'Dinner', 'Snack']
+
+// ── Parsers / helpers ──────────────────────────────────────────────────────
 
 function parseMealPlan(text) {
   if (!text) return []
@@ -80,9 +83,7 @@ function parseMacros(str) {
   return { cal, p, c, f }
 }
 
-function capitalize(s) {
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
+function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1) }
 
 function serializePlan(days) {
   return days.map(d =>
@@ -94,30 +95,84 @@ function serializePlan(days) {
   ).join('\n\n')
 }
 
-function templateToMeal(template) {
+function templateToMeal(template, qty = 1) {
   const type = template.meal.toLowerCase()
+  const scaledMacros = `${Math.round(template.calories * qty)} cal | ${Math.round(template.protein * qty)}g P | ${Math.round(template.carbs * qty)}g C | ${Math.round(template.fat * qty)}g F`
   return {
     type,
     icon: MEAL_ICONS[type] || '🍴',
-    title: template.name,
+    title: qty > 1 ? `${template.name} ×${qty}` : template.name,
     bullets: (template.description || '').split('\n').filter(Boolean).map(l => l.replace(/^[-•]\s*/, '')),
-    macros: `${template.calories} cal | ${template.protein}g P | ${template.carbs}g C | ${template.fat}g F`,
+    macros: scaledMacros,
   }
+}
+
+// ── QtyPills — compact serving count selector ──────────────────────────────
+function QtyPills({ qty, onChange, max = 8 }) {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs text-stone-400 mr-1">Servings:</span>
+      {Array.from({ length: max }, (_, i) => i + 1).map(n => (
+        <button
+          key={n}
+          type="button"
+          onClick={() => onChange(n)}
+          className={`w-6 h-6 rounded-md text-xs font-medium transition-colors ${
+            qty === n
+              ? 'bg-emerald-500 text-white'
+              : 'bg-stone-100 text-stone-500 hover:bg-stone-200'
+          }`}
+        >
+          {n}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── VarietyStepper — +/- for meal variety count ────────────────────────────
+function VarietyStepper({ label, value, onChange, min = 1, max = 7 }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-xs text-stone-500 font-medium">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange(Math.max(min, value - 1))}
+          className="w-6 h-6 rounded-md bg-stone-100 text-stone-500 hover:bg-stone-200 text-sm font-bold leading-none flex items-center justify-center"
+        >−</button>
+        <span className="w-5 text-center text-sm font-semibold text-gray-800">{value}</span>
+        <button
+          type="button"
+          onClick={() => onChange(Math.min(max, value + 1))}
+          className="w-6 h-6 rounded-md bg-stone-100 text-stone-500 hover:bg-stone-200 text-sm font-bold leading-none flex items-center justify-center"
+        >+</button>
+      </div>
+    </div>
+  )
 }
 
 // ── SwapPanel ──────────────────────────────────────────────────────────────
 function SwapPanel({ mealType, templates, onSelect, onClose }) {
   const [search, setSearch] = useState('')
+  const [qty, setQty] = useState(1)
+
   const filtered = (templates || [])
     .filter(t => t.meal.toLowerCase() === mealType.toLowerCase())
     .filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="mt-2 p-3 bg-white border border-stone-200 rounded-xl shadow-sm">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2.5">
         <p className="text-xs font-semibold text-stone-600">Swap with a saved recipe</p>
         <button onClick={onClose} className="text-stone-300 hover:text-stone-500 text-sm leading-none">✕</button>
       </div>
+
+      {/* Serving count */}
+      <div className="mb-2.5">
+        <QtyPills qty={qty} onChange={setQty} />
+      </div>
+
       <input
         type="text"
         value={search}
@@ -126,6 +181,7 @@ function SwapPanel({ mealType, templates, onSelect, onClose }) {
         className="input-base text-xs py-1.5 mb-2"
         autoFocus
       />
+
       {templates === null ? (
         <p className="text-xs text-stone-400 text-center py-3">Loading…</p>
       ) : filtered.length === 0 ? (
@@ -138,11 +194,13 @@ function SwapPanel({ mealType, templates, onSelect, onClose }) {
           {filtered.map(t => (
             <li key={t.id} className="flex items-center justify-between gap-2 p-2 hover:bg-stone-50 rounded-lg">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-gray-800 truncate">{t.name}</p>
-                <p className="text-xs text-stone-400">{t.calories} cal | {t.protein}g P | {t.carbs}g C | {t.fat}g F</p>
+                <p className="text-xs font-medium text-gray-800 truncate">{t.name}{qty > 1 ? ` ×${qty}` : ''}</p>
+                <p className="text-xs text-stone-400">
+                  {Math.round(t.calories * qty)} cal | {Math.round(t.protein * qty)}g P | {Math.round(t.carbs * qty)}g C | {Math.round(t.fat * qty)}g F
+                </p>
               </div>
               <button
-                onClick={() => onSelect(t)}
+                onClick={() => onSelect(t, qty)}
                 className="shrink-0 text-xs px-2.5 py-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
               >
                 Use this
@@ -185,11 +243,150 @@ function HeartButton({ mealText, liked, onToggle, loading }) {
     <button
       onClick={() => onToggle(mealText)}
       disabled={loading}
-      className={`ml-2 shrink-0 text-base transition-all active:scale-90 ${loading ? 'opacity-40' : ''}`}
+      className={`ml-1 shrink-0 text-base transition-all active:scale-90 ${loading ? 'opacity-40' : ''}`}
       title={liked ? 'Remove from saved' : 'Save this meal'}
     >
       {liked ? '❤️' : '🤍'}
     </button>
+  )
+}
+
+// ── TemplatePicker (inside PlannerForm) ────────────────────────────────────
+function TemplatePicker({ selected, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [templates, setTemplates] = useState(null)
+  const [activeTab, setActiveTab] = useState('Breakfast')
+
+  async function handleOpen() {
+    setOpen(true)
+    if (templates === null) {
+      try {
+        const res = await fetch('/api/dashboard/templates')
+        const data = await res.json()
+        setTemplates(data.templates || [])
+      } catch {
+        setTemplates([])
+      }
+    }
+  }
+
+  function toggleTemplate(t) {
+    const exists = selected.find(s => s.id === t.id)
+    if (exists) {
+      onChange(selected.filter(s => s.id !== t.id))
+    } else {
+      onChange([...selected, { ...t, quantity: 1 }])
+    }
+  }
+
+  function setQty(id, qty) {
+    onChange(selected.map(s => s.id === id ? { ...s, quantity: qty } : s))
+  }
+
+  const tabTemplates = (templates || []).filter(t => t.meal === activeTab)
+  const isSelected = (id) => selected.some(s => s.id === id)
+
+  return (
+    <div>
+      {/* Selected chips */}
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selected.map(s => (
+            <span
+              key={s.id}
+              className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full"
+            >
+              {MEAL_ICONS[s.meal.toLowerCase()] || '🍴'} {s.name}{s.quantity > 1 ? ` ×${s.quantity}` : ''}
+              <button
+                type="button"
+                onClick={() => onChange(selected.filter(sel => sel.id !== s.id))}
+                className="ml-0.5 text-emerald-400 hover:text-emerald-600"
+              >✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={open ? () => setOpen(false) : handleOpen}
+        className="text-xs text-stone-500 hover:text-emerald-600 underline underline-offset-2 flex items-center gap-1 transition-colors"
+      >
+        📌 {open ? 'Hide recipe picker' : `Choose specific recipes${selected.length ? ` (${selected.length} selected)` : ''}`}
+      </button>
+
+      {open && (
+        <div className="mt-2 border border-stone-200 rounded-xl bg-white overflow-hidden">
+          {/* Meal type tabs */}
+          <div className="flex border-b border-stone-100">
+            {MEAL_TYPES_DISPLAY.map(meal => (
+              <button
+                key={meal}
+                type="button"
+                onClick={() => setActiveTab(meal)}
+                className={`flex-1 text-xs py-2 font-medium transition-colors ${
+                  activeTab === meal
+                    ? 'text-emerald-600 border-b-2 border-emerald-500 bg-emerald-50/50'
+                    : 'text-stone-400 hover:text-stone-600'
+                }`}
+              >
+                {MEAL_ICONS[meal.toLowerCase()]} {meal}
+              </button>
+            ))}
+          </div>
+
+          <div className="p-2 max-h-52 overflow-y-auto">
+            {templates === null ? (
+              <p className="text-xs text-stone-400 text-center py-4">Loading…</p>
+            ) : tabTemplates.length === 0 ? (
+              <p className="text-xs text-stone-400 text-center py-4">
+                No {activeTab} recipes yet.{' '}
+                <a href="/templates" className="text-emerald-500 underline">Add one →</a>
+              </p>
+            ) : (
+              <ul className="space-y-1">
+                {tabTemplates.map(t => {
+                  const sel = selected.find(s => s.id === t.id)
+                  return (
+                    <li
+                      key={t.id}
+                      className={`p-2 rounded-lg transition-colors ${
+                        sel ? 'bg-emerald-50 border border-emerald-200' : 'hover:bg-stone-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleTemplate(t)}
+                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            sel
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : 'border-stone-300 hover:border-emerald-400'
+                          }`}
+                        >
+                          {sel && <span className="text-xs leading-none">✓</span>}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-800 truncate">{t.name}</p>
+                          <p className="text-xs text-stone-400">{t.calories} cal · {t.protein}g P</p>
+                        </div>
+                      </div>
+
+                      {/* Quantity stepper — only shown when selected */}
+                      {sel && (
+                        <div className="mt-1.5 ml-6">
+                          <QtyPills qty={sel.quantity} onChange={(q) => setQty(t.id, q)} max={10} />
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -202,10 +399,12 @@ const SCHEDULE_OPTIONS = [
 
 function PlannerForm({ onGenerate, generating }) {
   const [form, setForm] = useState({ enjoyed: '', avoid: '', cravings: '', schedule: 'moderate' })
+  const [variety, setVariety] = useState({ breakfast: 2, lunch: 3, dinner: 3, snack: 2 })
+  const [selectedTemplates, setSelectedTemplates] = useState([])
 
   function handleSubmit(e) {
     e.preventDefault()
-    onGenerate(form)
+    onGenerate({ ...form, mealVariety: variety, selectedTemplates })
   }
 
   return (
@@ -281,6 +480,32 @@ function PlannerForm({ onGenerate, generating }) {
               ))}
             </div>
           </div>
+
+          {/* Meal variety pickers */}
+          <div className="bg-white/70 rounded-xl p-3 border border-orange-100">
+            <label className="text-xs font-medium text-stone-500 mb-3 block">
+              How many different recipes per meal type? 🔁
+            </label>
+            <div className="flex justify-between">
+              {(['breakfast', 'lunch', 'dinner', 'snack']).map(meal => (
+                <VarietyStepper
+                  key={meal}
+                  label={capitalize(meal)}
+                  value={variety[meal]}
+                  onChange={(v) => setVariety({ ...variety, [meal]: v })}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-stone-300 mt-2 text-center">Recipes repeat across the week — lower = more repetition</p>
+          </div>
+
+          {/* Template picker */}
+          <div className="bg-white/70 rounded-xl p-3 border border-orange-100">
+            <label className="text-xs font-medium text-stone-500 mb-2 block">
+              Want specific recipes in the plan? 📌
+            </label>
+            <TemplatePicker selected={selectedTemplates} onChange={setSelectedTemplates} />
+          </div>
         </div>
 
         <button
@@ -317,12 +542,12 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
 
   // Mutable plan state for swaps
   const [planDays, setPlanDays] = useState(() => parseMealPlan(initialPlan?.plan))
-  const [swappingSlot, setSwappingSlot] = useState(null) // { dayIndex, mealIndex }
-  const [swapTemplates, setSwapTemplates] = useState(null) // null = not yet loaded
+  const [swappingSlot, setSwappingSlot] = useState(null)
+  const [swapTemplates, setSwapTemplates] = useState(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Sync planDays whenever plan state changes (after generate / refine)
+  // Sync planDays when plan regenerates/refines
   useEffect(() => {
     setPlanDays(parseMealPlan(plan?.plan))
     setHasUnsavedChanges(false)
@@ -331,9 +556,8 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
 
   // ── Swap helpers ───────────────────────────────────────────────────────
   async function openSwap(dayIndex, mealIndex) {
-    // Load templates lazily on first open
+    setSwappingSlot({ dayIndex, mealIndex })
     if (swapTemplates === null) {
-      setSwappingSlot({ dayIndex, mealIndex })
       try {
         const res = await fetch('/api/dashboard/templates')
         const data = await res.json()
@@ -341,17 +565,16 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
       } catch {
         setSwapTemplates([])
       }
-    } else {
-      setSwappingSlot({ dayIndex, mealIndex })
     }
   }
 
-  function applySwap(template) {
+  function applySwap(template, qty = 1) {
     const { dayIndex, mealIndex } = swappingSlot
+    const newMeal = templateToMeal(template, qty)
     const newDays = planDays.map((d, di) =>
       di !== dayIndex ? d : {
         ...d,
-        meals: d.meals.map((m, mi) => mi !== mealIndex ? m : templateToMeal(template)),
+        meals: d.meals.map((m, mi) => mi !== mealIndex ? m : newMeal),
       }
     )
     setPlanDays(newDays)
@@ -371,7 +594,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
       setHasUnsavedChanges(false)
       router.refresh()
     } catch {
-      // silently fail — user can retry
+      // silently fail
     } finally {
       setSaving(false)
     }
@@ -445,8 +668,6 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
       setRefining(false)
     }
   }
-
-  const savedList = initialLikedMeals.filter((m) => likedMeals.includes(m.name))
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
@@ -573,8 +794,6 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                       <p className="text-sm font-semibold text-gray-700 mb-3">
                         {planDays[activeDay].day}
                       </p>
-
-                      {/* Daily macro summary bar */}
                       <DailyMacroBar meals={planDays[activeDay].meals} targets={targets} />
 
                       <div className="space-y-2">
@@ -617,7 +836,6 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 shrink-0">
-                                  {/* Swap button */}
                                   <button
                                     onClick={() => isSwapping ? setSwappingSlot(null) : openSwap(activeDay, mealIndex)}
                                     className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
@@ -638,7 +856,6 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                                 </div>
                               </div>
 
-                              {/* Swap panel inline below this card */}
                               {isSwapping && (
                                 <SwapPanel
                                   mealType={meal.type}
