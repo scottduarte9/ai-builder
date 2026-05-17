@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -22,7 +22,6 @@ const MEAL_LABEL_COLORS = {
 
 function parseMealPlan(text) {
   if (!text) return []
-  // Strip markdown: #, *, _, ` so "## **MONDAY**" → "MONDAY" and "**Breakfast:**" → "Breakfast:"
   const clean = (s) => s.replace(/[#*_`]/g, '').replace(/\s+/g, ' ').trim()
   const days = []
   let currentDay = null
@@ -59,7 +58,6 @@ function parseMealPlan(text) {
       } else if (bulletMatch) {
         currentMeal.bullets.push(bulletMatch[1].trim())
       } else if (!currentMeal.bullets.length && line) {
-        // pre-bullet continuation text (old format compat)
         currentMeal.title += (currentMeal.title ? ' ' : '') + line
       }
     }
@@ -73,6 +71,115 @@ function parseMealPlan(text) {
   return days
 }
 
+function parseMacros(str) {
+  if (!str) return { cal: 0, p: 0, c: 0, f: 0 }
+  const cal = parseInt(str.match(/(\d+)\s*cal/i)?.[1] || 0)
+  const p = parseInt(str.match(/(\d+)g?\s*P\b/i)?.[1] || 0)
+  const c = parseInt(str.match(/(\d+)g?\s*C\b/i)?.[1] || 0)
+  const f = parseInt(str.match(/(\d+)g?\s*F\b/i)?.[1] || 0)
+  return { cal, p, c, f }
+}
+
+function capitalize(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+function serializePlan(days) {
+  return days.map(d =>
+    d.day + '\n' + d.meals.map(m =>
+      `${capitalize(m.type)}: ${m.title}\n` +
+      m.bullets.map(b => `- ${b}`).join('\n') +
+      (m.macros ? `\nMacros: ${m.macros}` : '')
+    ).join('\n\n')
+  ).join('\n\n')
+}
+
+function templateToMeal(template) {
+  const type = template.meal.toLowerCase()
+  return {
+    type,
+    icon: MEAL_ICONS[type] || '🍴',
+    title: template.name,
+    bullets: (template.description || '').split('\n').filter(Boolean).map(l => l.replace(/^[-•]\s*/, '')),
+    macros: `${template.calories} cal | ${template.protein}g P | ${template.carbs}g C | ${template.fat}g F`,
+  }
+}
+
+// ── SwapPanel ──────────────────────────────────────────────────────────────
+function SwapPanel({ mealType, templates, onSelect, onClose }) {
+  const [search, setSearch] = useState('')
+  const filtered = (templates || [])
+    .filter(t => t.meal.toLowerCase() === mealType.toLowerCase())
+    .filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()))
+
+  return (
+    <div className="mt-2 p-3 bg-white border border-stone-200 rounded-xl shadow-sm">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-stone-600">Swap with a saved recipe</p>
+        <button onClick={onClose} className="text-stone-300 hover:text-stone-500 text-sm leading-none">✕</button>
+      </div>
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search recipes…"
+        className="input-base text-xs py-1.5 mb-2"
+        autoFocus
+      />
+      {templates === null ? (
+        <p className="text-xs text-stone-400 text-center py-3">Loading…</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-xs text-stone-400 text-center py-3">
+          No {capitalize(mealType)} recipes saved.{' '}
+          <a href="/templates" className="text-emerald-500 underline">Add one →</a>
+        </p>
+      ) : (
+        <ul className="space-y-1 max-h-48 overflow-y-auto">
+          {filtered.map(t => (
+            <li key={t.id} className="flex items-center justify-between gap-2 p-2 hover:bg-stone-50 rounded-lg">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-800 truncate">{t.name}</p>
+                <p className="text-xs text-stone-400">{t.calories} cal | {t.protein}g P | {t.carbs}g C | {t.fat}g F</p>
+              </div>
+              <button
+                onClick={() => onSelect(t)}
+                className="shrink-0 text-xs px-2.5 py-1 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+              >
+                Use this
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+// ── DailyMacroBar ──────────────────────────────────────────────────────────
+function DailyMacroBar({ meals, targets }) {
+  const totals = meals.reduce((acc, m) => {
+    const { cal, p, c, f } = parseMacros(m.macros)
+    return { cal: acc.cal + cal, p: acc.p + p, c: acc.c + c, f: acc.f + f }
+  }, { cal: 0, p: 0, c: 0, f: 0 })
+
+  if (!totals.cal) return null
+
+  const pctOver = targets?.calories ? (totals.cal - targets.calories) / targets.calories : 0
+  const color = pctOver > 0.2
+    ? 'text-red-500 bg-red-50 border-red-100'
+    : pctOver > 0.1
+    ? 'text-amber-600 bg-amber-50 border-amber-100'
+    : 'text-emerald-600 bg-emerald-50 border-emerald-100'
+
+  return (
+    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-medium mb-3 w-fit ${color}`}>
+      <span>📊</span>
+      <span>Day total: {totals.cal} cal | {totals.p}g P | {totals.c}g C | {totals.f}g F</span>
+    </div>
+  )
+}
+
+// ── HeartButton ────────────────────────────────────────────────────────────
 function HeartButton({ mealText, liked, onToggle, loading }) {
   return (
     <button
@@ -86,6 +193,7 @@ function HeartButton({ mealText, liked, onToggle, loading }) {
   )
 }
 
+// ── PlannerForm ────────────────────────────────────────────────────────────
 const SCHEDULE_OPTIONS = [
   { value: 'busy', label: '🏃 Busy', desc: 'Quick meals' },
   { value: 'moderate', label: '😊 Moderate', desc: 'Mix it up' },
@@ -192,7 +300,8 @@ function PlannerForm({ onGenerate, generating }) {
   )
 }
 
-export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] }) {
+// ── Main component ─────────────────────────────────────────────────────────
+export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], targets = null }) {
   const [plan, setPlan] = useState(initialPlan)
   const [likedMeals, setLikedMeals] = useState(initialLikedMeals.map((m) => m.name))
   const [generating, setGenerating] = useState(false)
@@ -206,8 +315,69 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
   const [refineError, setRefineError] = useState(null)
   const router = useRouter()
 
-  const parsedDays = parseMealPlan(plan?.plan)
+  // Mutable plan state for swaps
+  const [planDays, setPlanDays] = useState(() => parseMealPlan(initialPlan?.plan))
+  const [swappingSlot, setSwappingSlot] = useState(null) // { dayIndex, mealIndex }
+  const [swapTemplates, setSwapTemplates] = useState(null) // null = not yet loaded
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [saving, setSaving] = useState(false)
 
+  // Sync planDays whenever plan state changes (after generate / refine)
+  useEffect(() => {
+    setPlanDays(parseMealPlan(plan?.plan))
+    setHasUnsavedChanges(false)
+    setSwappingSlot(null)
+  }, [plan])
+
+  // ── Swap helpers ───────────────────────────────────────────────────────
+  async function openSwap(dayIndex, mealIndex) {
+    // Load templates lazily on first open
+    if (swapTemplates === null) {
+      setSwappingSlot({ dayIndex, mealIndex })
+      try {
+        const res = await fetch('/api/dashboard/templates')
+        const data = await res.json()
+        setSwapTemplates(data.templates || [])
+      } catch {
+        setSwapTemplates([])
+      }
+    } else {
+      setSwappingSlot({ dayIndex, mealIndex })
+    }
+  }
+
+  function applySwap(template) {
+    const { dayIndex, mealIndex } = swappingSlot
+    const newDays = planDays.map((d, di) =>
+      di !== dayIndex ? d : {
+        ...d,
+        meals: d.meals.map((m, mi) => mi !== mealIndex ? m : templateToMeal(template)),
+      }
+    )
+    setPlanDays(newDays)
+    setHasUnsavedChanges(true)
+    setSwappingSlot(null)
+  }
+
+  async function savePlan() {
+    setSaving(true)
+    try {
+      const serialized = serializePlan(planDays)
+      await fetch('/api/dashboard/meal-plan', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: serialized, groceryList: plan?.groceryList || '' }),
+      })
+      setHasUnsavedChanges(false)
+      router.refresh()
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Generate / refine ──────────────────────────────────────────────────
   async function generatePlan(weeklyContext) {
     setGenerating(true)
     setError(null)
@@ -278,6 +448,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
 
   const savedList = initialLikedMeals.filter((m) => likedMeals.includes(m.name))
 
+  // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="card">
       {/* Header */}
@@ -287,16 +458,32 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
           <h2 className="section-title mb-0">Weekly Meal Plan</h2>
           {plan?.weekStart && <span className="text-xs text-stone-400 hidden sm:inline">· week of {plan.weekStart}</span>}
         </div>
-        <button
-          onClick={() => setShowPlanner(!showPlanner)}
-          className={`btn text-xs px-3 py-1.5 transition-all ${
-            showPlanner
-              ? 'bg-stone-100 text-stone-600'
-              : 'bg-orange-500 text-white hover:bg-orange-600'
-          }`}
-        >
-          {showPlanner ? '✕ Cancel' : plan ? '↺ New Plan' : '+ Plan Week'}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasUnsavedChanges && (
+            <button
+              onClick={savePlan}
+              disabled={saving}
+              className="btn text-xs px-3 py-1.5 bg-emerald-500 text-white hover:bg-emerald-600"
+            >
+              {saving ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Saving…
+                </span>
+              ) : '↑ Save Changes'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowPlanner(!showPlanner)}
+            className={`btn text-xs px-3 py-1.5 transition-all ${
+              showPlanner
+                ? 'bg-stone-100 text-stone-600'
+                : 'bg-orange-500 text-white hover:bg-orange-600'
+            }`}
+          >
+            {showPlanner ? '✕ Cancel' : plan ? '↺ New Plan' : '+ Plan Week'}
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
@@ -308,7 +495,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
         </div>
       )}
 
-      {/* AI Tweak Bar — only show when plan exists and planner is hidden */}
+      {/* AI Tweak Bar */}
       {plan && !showPlanner && (
         <form onSubmit={refinePlan} className="mb-4">
           <div className="flex gap-2 items-center p-2.5 bg-stone-50 border border-stone-200 rounded-xl focus-within:border-orange-300 transition-colors">
@@ -356,16 +543,16 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
         </div>
       )}
 
-      {/* MEAL PLAN TAB */}
+      {/* ── MEAL PLAN TAB ── */}
       {tab === 'plan' && !showPlanner && (
         <>
           {plan ? (
             <>
-              {parsedDays.length > 0 ? (
+              {planDays.length > 0 ? (
                 <>
                   {/* Day selector */}
                   <div className="flex gap-1.5 overflow-x-auto pb-1 mb-4 scrollbar-none">
-                    {parsedDays.map((d, i) => (
+                    {planDays.map((d, i) => (
                       <button
                         key={d.day}
                         onClick={() => setActiveDay(i)}
@@ -381,54 +568,89 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
                   </div>
 
                   {/* Meals for active day */}
-                  {parsedDays[activeDay] && (
-                    <div className="space-y-2">
+                  {planDays[activeDay] && (
+                    <div>
                       <p className="text-sm font-semibold text-gray-700 mb-3">
-                        {parsedDays[activeDay].day}
+                        {planDays[activeDay].day}
                       </p>
-                      {parsedDays[activeDay].meals.map((meal, i) => {
-                        const key = meal.title.slice(0, 120)
-                        const isLiked = likedMeals.includes(key)
-                        return (
-                          <div
-                            key={i}
-                            className={`flex items-start gap-3 p-3.5 rounded-xl border-l-4 border border-stone-100 transition-colors ${
-                              MEAL_COLORS[meal.type] || 'bg-stone-50 border-l-stone-300'
-                            } ${isLiked ? 'ring-1 ring-red-200' : ''}`}
-                          >
-                            <span className="text-xl shrink-0 mt-0.5">{meal.icon}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${MEAL_LABEL_COLORS[meal.type] || 'text-stone-400'}`}>
-                                {meal.type}
-                              </p>
-                              {meal.title && (
-                                <p className="text-sm font-medium text-gray-800 leading-snug mb-1.5">{meal.title}</p>
-                              )}
-                              {meal.bullets.length > 0 && (
-                                <ul className="space-y-1">
-                                  {meal.bullets.map((b, j) => (
-                                    <li key={j} className="flex items-start gap-2 text-xs text-gray-600 leading-relaxed">
-                                      <span className="mt-1.5 w-1 h-1 rounded-full bg-stone-300 shrink-0" />
-                                      {b}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                              {meal.macros && (
-                                <p className="mt-2 text-xs font-medium text-stone-500 bg-stone-100 rounded-lg px-2.5 py-1 inline-block">
-                                  {meal.macros}
-                                </p>
+
+                      {/* Daily macro summary bar */}
+                      <DailyMacroBar meals={planDays[activeDay].meals} targets={targets} />
+
+                      <div className="space-y-2">
+                        {planDays[activeDay].meals.map((meal, mealIndex) => {
+                          const key = meal.title.slice(0, 120)
+                          const isLiked = likedMeals.includes(key)
+                          const isSwapping =
+                            swappingSlot?.dayIndex === activeDay &&
+                            swappingSlot?.mealIndex === mealIndex
+
+                          return (
+                            <div key={mealIndex}>
+                              <div
+                                className={`flex items-start gap-3 p-3.5 rounded-xl border-l-4 border border-stone-100 transition-colors ${
+                                  MEAL_COLORS[meal.type] || 'bg-stone-50 border-l-stone-300'
+                                } ${isLiked ? 'ring-1 ring-red-200' : ''} ${isSwapping ? 'ring-1 ring-emerald-300' : ''}`}
+                              >
+                                <span className="text-xl shrink-0 mt-0.5">{meal.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${MEAL_LABEL_COLORS[meal.type] || 'text-stone-400'}`}>
+                                    {meal.type}
+                                  </p>
+                                  {meal.title && (
+                                    <p className="text-sm font-medium text-gray-800 leading-snug mb-1.5">{meal.title}</p>
+                                  )}
+                                  {meal.bullets.length > 0 && (
+                                    <ul className="space-y-1">
+                                      {meal.bullets.map((b, j) => (
+                                        <li key={j} className="flex items-start gap-2 text-xs text-gray-600 leading-relaxed">
+                                          <span className="mt-1.5 w-1 h-1 rounded-full bg-stone-300 shrink-0" />
+                                          {b}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {meal.macros && (
+                                    <p className="mt-2 text-xs font-medium text-stone-500 bg-stone-100 rounded-lg px-2.5 py-1 inline-block">
+                                      {meal.macros}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {/* Swap button */}
+                                  <button
+                                    onClick={() => isSwapping ? setSwappingSlot(null) : openSwap(activeDay, mealIndex)}
+                                    className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                                      isSwapping
+                                        ? 'bg-emerald-500 text-white border-emerald-500'
+                                        : 'bg-white text-stone-400 border-stone-200 hover:border-emerald-300 hover:text-emerald-500'
+                                    }`}
+                                    title="Swap this meal"
+                                  >
+                                    ↕
+                                  </button>
+                                  <HeartButton
+                                    mealText={key}
+                                    liked={isLiked}
+                                    onToggle={toggleLike}
+                                    loading={heartLoading === key}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Swap panel inline below this card */}
+                              {isSwapping && (
+                                <SwapPanel
+                                  mealType={meal.type}
+                                  templates={swapTemplates}
+                                  onSelect={applySwap}
+                                  onClose={() => setSwappingSlot(null)}
+                                />
                               )}
                             </div>
-                            <HeartButton
-                              mealText={key}
-                              liked={isLiked}
-                              onToggle={toggleLike}
-                              loading={heartLoading === key}
-                            />
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                      </div>
                     </div>
                   )}
                 </>
@@ -456,7 +678,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
         </>
       )}
 
-      {/* GROCERY TAB */}
+      {/* ── GROCERY TAB ── */}
       {tab === 'grocery' && !showPlanner && (
         <>
           {plan?.groceryList ? (
@@ -478,7 +700,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [] })
         </>
       )}
 
-      {/* SAVED TAB */}
+      {/* ── SAVED TAB ── */}
       {tab === 'saved' && !showPlanner && (
         <>
           {likedMeals.length === 0 ? (

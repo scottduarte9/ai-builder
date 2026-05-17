@@ -10,6 +10,17 @@ export async function GET() {
   }
 }
 
+export async function PUT(req) {
+  try {
+    const { plan, groceryList } = await req.json()
+    const weekStart = new Date().toISOString().split('T')[0]
+    await createMealPlan({ weekStart, plan, groceryList: groceryList || '' })
+    return Response.json({ ok: true })
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 })
+  }
+}
+
 export async function POST(req) {
   try {
     let weeklyContext = {}

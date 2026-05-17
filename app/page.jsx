@@ -54,7 +54,7 @@ export default async function Dashboard() {
           <LogWeightForm />
         </div>
 
-        <MealPlanDisplay initialPlan={mealPlan} initialLikedMeals={likedMeals} />
+        <MealPlanDisplay initialPlan={mealPlan} initialLikedMeals={likedMeals} targets={targets} />
 
         <WeightChart />
 
