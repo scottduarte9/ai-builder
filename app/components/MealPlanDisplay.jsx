@@ -546,6 +546,8 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
   const [swapTemplates, setSwapTemplates] = useState(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [saving, setSaving] = useState(false)
+  // Save as Recipe state: null | 'key' (saving) | 'key-done' (saved)
+  const [saveRecipeState, setSaveRecipeState] = useState(null)
 
   // Sync planDays when plan regenerates/refines
   useEffect(() => {
@@ -597,6 +599,33 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
       // silently fail
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function saveAsRecipe(meal, slotKey) {
+    setSaveRecipeState(slotKey)
+    const { cal, p, c, f } = parseMacros(meal.macros)
+    const mealType = capitalize(meal.type) // Breakfast / Lunch / Dinner / Snack
+    // Strip "×N" quantity suffix from title if present
+    const cleanTitle = meal.title.replace(/\s*×\d+$/, '').trim()
+    try {
+      await fetch('/api/dashboard/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: cleanTitle,
+          meal: mealType,
+          description: meal.bullets.join('\n'),
+          protein: p,
+          carbs: c,
+          fat: f,
+          calories: cal,
+        }),
+      })
+      setSaveRecipeState(slotKey + '-done')
+      setTimeout(() => setSaveRecipeState(null), 2000)
+    } catch {
+      setSaveRecipeState(null)
     }
   }
 
@@ -799,10 +828,13 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                       <div className="space-y-2">
                         {planDays[activeDay].meals.map((meal, mealIndex) => {
                           const key = meal.title.slice(0, 120)
+                          const slotKey = `${activeDay}-${mealIndex}`
                           const isLiked = likedMeals.includes(key)
                           const isSwapping =
                             swappingSlot?.dayIndex === activeDay &&
                             swappingSlot?.mealIndex === mealIndex
+                          const isSavingRecipe = saveRecipeState === slotKey
+                          const isSavedRecipe = saveRecipeState === slotKey + '-done'
 
                           return (
                             <div key={mealIndex}>
@@ -835,24 +867,39 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                                     </p>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1 shrink-0">
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={() => isSwapping ? setSwappingSlot(null) : openSwap(activeDay, mealIndex)}
+                                      className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
+                                        isSwapping
+                                          ? 'bg-emerald-500 text-white border-emerald-500'
+                                          : 'bg-white text-stone-400 border-stone-200 hover:border-emerald-300 hover:text-emerald-500'
+                                      }`}
+                                      title="Swap this meal"
+                                    >
+                                      ↕
+                                    </button>
+                                    <HeartButton
+                                      mealText={key}
+                                      liked={isLiked}
+                                      onToggle={toggleLike}
+                                      loading={heartLoading === key}
+                                    />
+                                  </div>
+                                  {/* Save as Recipe button */}
                                   <button
-                                    onClick={() => isSwapping ? setSwappingSlot(null) : openSwap(activeDay, mealIndex)}
-                                    className={`text-xs px-2 py-1 rounded-lg border transition-colors ${
-                                      isSwapping
-                                        ? 'bg-emerald-500 text-white border-emerald-500'
-                                        : 'bg-white text-stone-400 border-stone-200 hover:border-emerald-300 hover:text-emerald-500'
+                                    onClick={() => saveAsRecipe(meal, slotKey)}
+                                    disabled={isSavingRecipe || isSavedRecipe}
+                                    className={`text-xs px-2 py-1 rounded-lg border transition-colors whitespace-nowrap ${
+                                      isSavedRecipe
+                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                        : 'bg-white text-stone-400 border-stone-200 hover:border-violet-300 hover:text-violet-500'
                                     }`}
-                                    title="Swap this meal"
+                                    title="Save to Recipe Library"
                                   >
-                                    ↕
+                                    {isSavedRecipe ? '✓ Saved' : isSavingRecipe ? '…' : '📥 Recipe'}
                                   </button>
-                                  <HeartButton
-                                    mealText={key}
-                                    liked={isLiked}
-                                    onToggle={toggleLike}
-                                    loading={heartLoading === key}
-                                  />
                                 </div>
                               </div>
 
