@@ -24,7 +24,13 @@ export async function PUT(req) {
 export async function POST(req) {
   try {
     let weeklyContext = {}
-    try { weeklyContext = (await req.json()).weeklyContext ?? {} } catch {}
+    try {
+      const body = await req.json()
+      weeklyContext = body.weeklyContext ?? {}
+      console.log('[meal-plan POST] selectedTemplates:', JSON.stringify(weeklyContext.selectedTemplates ?? []))
+    } catch (e) {
+      console.error('[meal-plan POST] failed to parse body:', e)
+    }
     const [settings, likedMeals] = await Promise.all([getUserSettings(), getLikedMeals()])
     const weekStart = new Date().toISOString().split('T')[0]
     const { plan, groceryList } = await generateMealPlan({
