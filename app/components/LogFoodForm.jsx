@@ -15,6 +15,7 @@ export default function LogFoodForm({ initialLogs = [] }) {
   const [editLoading, setEditLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deleteError, setDeleteError] = useState(null)
   // Local copy for optimistic delete
   const [logs, setLogs] = useState(initialLogs)
   const router = useRouter()
@@ -57,7 +58,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
   async function deleteLog(log) {
     setDeletingId(log.id)
     setConfirmDeleteId(null)
-    // Optimistic: remove from local list immediately
+    setDeleteError(null)
+    // Optimistic: remove from local list immediately — don't restore on failure
     setLogs((prev) => prev.filter((l) => l.id !== log.id))
     try {
       const res = await fetch('/api/dashboard/log-food', {
@@ -66,14 +68,14 @@ export default function LogFoodForm({ initialLogs = [] }) {
         body: JSON.stringify({ pageId: log.id }),
       })
       if (!res.ok) {
-        // Restore on failure
-        setLogs((prev) => [...prev, log])
+        const data = await res.json().catch(() => ({}))
+        setDeleteError(data.error || 'Delete failed')
       } else {
-        router.refresh() // update macro bar
+        // Delay refresh so Notion propagates before re-fetch
+        setTimeout(() => router.refresh(), 1500)
       }
     } catch {
-      // Restore on network error
-      setLogs((prev) => [...prev, log])
+      setDeleteError('Network error')
     } finally {
       setDeletingId(null)
     }
@@ -122,6 +124,7 @@ export default function LogFoodForm({ initialLogs = [] }) {
           {loading ? 'Logging…' : 'Log Food'}
         </button>
         {error && <p className="text-xs text-red-500">{error}</p>}
+        {deleteError && <p className="text-xs text-red-500">⚠️ {deleteError}</p>}
         {success && (
           <p className="text-xs text-emerald-600 flex items-start gap-1">
             <span>✓</span><span>Logged: {success}</span>

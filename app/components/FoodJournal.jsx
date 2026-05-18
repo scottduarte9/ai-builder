@@ -132,6 +132,7 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
   const [editLoading, setEditLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [deleteError, setDeleteError] = useState(null)
   const router = useRouter()
 
   function startEdit(entry) {
@@ -166,7 +167,9 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
   async function deleteEntry(entry) {
     setDeletingId(entry.id)
     setConfirmDeleteId(null)
-    // Optimistic: remove immediately
+    setDeleteError(null)
+    // Optimistic: remove immediately — don't restore even on failure
+    // (restoring caused the "flicker" repopulation bug)
     setLogs((prev) => prev.filter((l) => l.id !== entry.id))
     try {
       const res = await fetch('/api/dashboard/log-food', {
@@ -175,12 +178,11 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
         body: JSON.stringify({ pageId: entry.id }),
       })
       if (!res.ok) {
-        // Restore on failure
-        setLogs((prev) => [...prev, entry])
+        const data = await res.json().catch(() => ({}))
+        setDeleteError(data.error || 'Delete failed — refresh to check')
       }
     } catch {
-      // Restore on network error
-      setLogs((prev) => [...prev, entry])
+      setDeleteError('Network error — refresh to check')
     } finally {
       setDeletingId(null)
     }
@@ -223,6 +225,10 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
           {dates.length} days logged · {totalLogged} total entries
         </p>
       </div>
+
+      {deleteError && (
+        <p className="text-xs text-red-500 mb-3 px-1">⚠️ {deleteError}</p>
+      )}
 
       {/* Weekly summary */}
       <WeeklySummary logsByDate={logsByDate} targets={targets} />
