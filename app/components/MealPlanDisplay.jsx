@@ -562,6 +562,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
   )
   const [loggingSlot, setLoggingSlot] = useState(null)
   const [logError, setLogError] = useState(null)
+  const [logErrorSlot, setLogErrorSlot] = useState(null) // which slot errored
 
   // Mutable plan state for swaps
   const [planDays, setPlanDays] = useState(() => parseMealPlan(initialPlan?.plan))
@@ -726,14 +727,18 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
     if (loggedMeals.has(meal.title)) return
     setLoggingSlot(slotKey)
     setLogError(null)
+    setLogErrorSlot(null)
     try {
       const { cal, p, c, f } = parseMacros(meal.macros)
       const mealType = capitalize(meal.type)
+      // Use title, or fall back to first bullet if title is empty
+      const description = meal.title || meal.bullets[0] || mealType
+
       const res = await fetch('/api/dashboard/log-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          description: meal.title,
+          description,
           meal: mealType,
           calories: cal,
           protein: p,
@@ -741,17 +746,20 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
           fat: f,
         }),
       })
-      const data = await res.json()
+      let data = {}
+      try { data = await res.json() } catch {}
       if (!res.ok) {
         throw new Error(data.error || `Server error ${res.status}`)
       }
-      setLoggedMeals(prev => new Set([...prev, meal.title]))
+      setLoggedMeals(prev => new Set([...prev, meal.title || description]))
       // Notify parent DashboardClient so MacroProgress updates immediately
       if (onLog && data.logged) {
         onLog(data.logged)
       }
     } catch (err) {
+      console.error('[logMeal] error:', err.message)
       setLogError(err.message)
+      setLogErrorSlot(slotKey)
     } finally {
       setLoggingSlot(null)
     }
@@ -953,6 +961,14 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                                   {/* Log button */}
                                   {loggedMeals.has(meal.title) ? (
                                     <span className="text-xs font-semibold text-emerald-500 px-2 py-1">✓ Logged</span>
+                                  ) : logErrorSlot === slotKey ? (
+                                    <button
+                                      onClick={() => { setLogErrorSlot(null); setLogError(null); logMeal(meal, slotKey) }}
+                                      className="text-xs px-2 py-1 rounded-lg border border-red-300 bg-red-50 text-red-500"
+                                      title={logError || 'Failed to log'}
+                                    >
+                                      ✗ Retry
+                                    </button>
                                   ) : (
                                     <button
                                       onClick={() => logMeal(meal, slotKey)}
