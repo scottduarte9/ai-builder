@@ -561,6 +561,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
     () => new Set(todayLogs.map(l => l.description))
   )
   const [loggingSlot, setLoggingSlot] = useState(null)
+  const [logError, setLogError] = useState(null)
 
   // Mutable plan state for swaps
   const [planDays, setPlanDays] = useState(() => parseMealPlan(initialPlan?.plan))
@@ -724,10 +725,11 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
   async function logMeal(meal, slotKey) {
     if (loggedMeals.has(meal.title)) return
     setLoggingSlot(slotKey)
+    setLogError(null)
     try {
       const { cal, p, c, f } = parseMacros(meal.macros)
       const mealType = capitalize(meal.type)
-      await fetch('/api/dashboard/log-food', {
+      const res = await fetch('/api/dashboard/log-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -739,9 +741,14 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
           fat: f,
         }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `Server error ${res.status}`)
+      }
       setLoggedMeals(prev => new Set([...prev, meal.title]))
-    } catch {
-      // silent
+      router.refresh() // update macro progress bar
+    } catch (err) {
+      setLogError(err.message)
     } finally {
       setLoggingSlot(null)
     }
@@ -840,6 +847,10 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
             </button>
           ))}
         </div>
+      )}
+
+      {logError && (
+        <p className="text-xs text-red-500 mb-3">⚠️ Couldn't log meal: {logError}</p>
       )}
 
       {/* ── MEAL PLAN TAB ── */}
