@@ -746,6 +746,8 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
         throw new Error(data.error || `Server error ${res.status}`)
       }
       setLoggedMeals(prev => new Set([...prev, meal.title]))
+      // Delay refresh so Notion propagates before re-fetch, same pattern as delete
+      setTimeout(() => router.refresh(), 1500)
     } catch (err) {
       setLogError(err.message)
     } finally {
