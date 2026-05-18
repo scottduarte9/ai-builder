@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Snack']
 const MEAL_ICONS = { Breakfast: '🍳', Lunch: '🥗', Dinner: '🍽️', Snack: '🍎' }
@@ -125,6 +126,52 @@ function WeeklySummary({ logsByDate, targets }) {
 
 export default function FoodJournal({ logs, targets }) {
   const [search, setSearch] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
+  const [editLoading, setEditLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
+  const router = useRouter()
+
+  function startEdit(entry) {
+    setEditingId(entry.id)
+    setEditForm({
+      description: entry.description || '',
+      protein: entry.protein,
+      carbs: entry.carbs,
+      fat: entry.fat,
+      calories: entry.calories,
+    })
+  }
+
+  async function saveEdit(entry) {
+    setEditLoading(true)
+    try {
+      await fetch('/api/dashboard/log-food', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: entry.id, ...editForm }),
+      })
+      setEditingId(null)
+      router.refresh()
+    } catch { /* silent */ } finally {
+      setEditLoading(false)
+    }
+  }
+
+  async function deleteEntry(entry) {
+    if (!window.confirm(`Remove "${entry.description}"?`)) return
+    setDeletingId(entry.id)
+    try {
+      await fetch('/api/dashboard/log-food', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: entry.id }),
+      })
+      router.refresh()
+    } catch { /* silent */ } finally {
+      setDeletingId(null)
+    }
+  }
 
   // Group logs by date
   const logsByDate = useMemo(() => {
@@ -256,13 +303,65 @@ export default function FoodJournal({ logs, targets }) {
                     </div>
                     <div className="space-y-2">
                       {byMeal[mealType].map((entry) => (
-                        <div key={entry.id} className="flex items-start justify-between gap-3">
-                          <p className="text-sm text-gray-700 leading-snug flex-1">{entry.description}</p>
-                          <div className="flex flex-wrap justify-end gap-1 shrink-0">
-                            <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">
-                              {entry.calories} cal
-                            </span>
-                          </div>
+                        <div key={entry.id}>
+                          {editingId === entry.id ? (
+                            <div className="space-y-2 bg-stone-50 rounded-xl p-3 border border-stone-100">
+                              <input
+                                className="w-full text-xs border border-stone-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                value={editForm.description}
+                                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                placeholder="Description"
+                              />
+                              <div className="grid grid-cols-4 gap-1.5">
+                                {[['protein','P'],['carbs','C'],['fat','F'],['calories','Cal']].map(([key, label]) => (
+                                  <div key={key}>
+                                    <label className="text-[10px] text-stone-400">{label}</label>
+                                    <input
+                                      type="number"
+                                      className="w-full text-xs border border-stone-200 rounded-lg px-2 py-1 mt-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                      value={editForm[key]}
+                                      onChange={(e) => setEditForm({ ...editForm, [key]: Number(e.target.value) })}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveEdit(entry)}
+                                  disabled={editLoading}
+                                  className="text-xs bg-emerald-500 text-white rounded-lg px-3 py-1.5 font-medium hover:bg-emerald-600"
+                                >
+                                  {editLoading ? 'Saving…' : 'Save'}
+                                </button>
+                                <button
+                                  onClick={() => setEditingId(null)}
+                                  className="text-xs text-stone-500 bg-stone-100 rounded-lg px-3 py-1.5 font-medium hover:bg-stone-200"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="text-sm text-gray-700 leading-snug flex-1">{entry.description}</p>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">
+                                  {entry.calories} cal
+                                </span>
+                                <button
+                                  onClick={() => startEdit(entry)}
+                                  className="text-stone-300 hover:text-stone-500 transition-colors text-sm leading-none"
+                                  title="Edit"
+                                >✏️</button>
+                                <button
+                                  onClick={() => deleteEntry(entry)}
+                                  disabled={deletingId === entry.id}
+                                  className="text-stone-300 hover:text-red-400 transition-colors text-sm leading-none"
+                                  title="Delete"
+                                >🗑️</button>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

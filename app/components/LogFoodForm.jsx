@@ -13,6 +13,7 @@ export default function LogFoodForm({ initialLogs = [] }) {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
   const [editLoading, setEditLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
   const router = useRouter()
 
   async function handleSubmit(e) {
@@ -48,6 +49,23 @@ export default function LogFoodForm({ initialLogs = [] }) {
       fat: log.fat,
       calories: log.calories,
     })
+  }
+
+  async function deleteLog(log) {
+    if (!window.confirm(`Remove "${log.description}" from today's log?`)) return
+    setDeletingId(log.id)
+    try {
+      await fetch('/api/dashboard/log-food', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId: log.id }),
+      })
+      router.refresh()
+    } catch {
+      // silent
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   async function saveEdit(log) {
@@ -155,13 +173,23 @@ export default function LogFoodForm({ initialLogs = [] }) {
                       P: {log.protein}g · C: {log.carbs}g · F: {log.fat}g · {log.calories} cal
                     </p>
                   </div>
-                  <button
-                    onClick={() => startEdit(log)}
-                    className="text-stone-300 hover:text-stone-500 transition-colors shrink-0 mt-0.5 text-sm"
-                    title="Edit entry"
-                  >
-                    ✏️
-                  </button>
+                  <div className="flex gap-1 shrink-0 mt-0.5">
+                    <button
+                      onClick={() => startEdit(log)}
+                      className="text-stone-300 hover:text-stone-500 transition-colors text-sm"
+                      title="Edit entry"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => deleteLog(log)}
+                      disabled={deletingId === log.id}
+                      className="text-stone-300 hover:text-red-400 transition-colors text-sm"
+                      title="Delete entry"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

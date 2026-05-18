@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing, generateMealPlan } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros, createMealPlan, getLikedMeals, getMealTemplates } from '@/lib/notion'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros, createMealPlan, getLikedMeals, getMealTemplates, deleteFoodLog, getLastFoodLog, logWater, getTodayWater } from '@/lib/notion'
 import { getCheckinState, clearCheckinState, advanceCheckinState, getMealPlannerState, setMealPlannerState, clearMealPlannerState } from '@/lib/state'
 import { PLANNER_QUESTIONS, PLANNER_KEYS } from '@/app/api/webhooks/weekly-meal-plan/route'
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
@@ -118,6 +118,52 @@ bot.on(message('text'), async (ctx) => {
       await ctx.reply("Couldn't pull the meal plan right now — try again in a moment!")
     }
     return
+  }
+
+  // Delete/undo last food log
+  if (/\b(delete|remove|undo|oops|wrong)\b.*(log|entry|that|last|food)/i.test(text) ||
+      /^(undo|delete that|remove that|oops)$/i.test(text.trim())) {
+    await ctx.sendChatAction('typing')
+    try {
+      const last = await getLastFoodLog()
+      if (!last) {
+        await ctx.reply("Nothing to undo — no food logged today yet.")
+      } else {
+        await deleteFoodLog(last.id)
+        await ctx.reply(`Done — removed "${last.description}" from today's log.`)
+      }
+    } catch {
+      await ctx.reply("Couldn't undo that — try again in a moment.")
+    }
+    return
+  }
+
+  // Water logging — "drank 16oz", "had a glass of water", etc.
+  {
+    const lower = text.toLowerCase()
+    const isWater =
+      /\b(water|glass(es)?|oz of water|cup of water|drank water|logged water|water intake)\b/.test(lower)
+    if (isWater) {
+      await ctx.sendChatAction('typing')
+      try {
+        const ozMatch = text.match(/(\d+)\s*oz/i)
+        const glassMatch = /\b(\d+)\s+glass(es)?\b/i.exec(text)
+        let oz = 8 // default one glass
+        if (ozMatch) oz = parseInt(ozMatch[1])
+        else if (glassMatch) oz = parseInt(glassMatch[1]) * 8
+        await logWater(oz)
+        const totalOz = await getTodayWater()
+        const goalOz = 110
+        const pct = Math.round((totalOz / goalOz) * 100)
+        await ctx.reply(`Logged ${oz}oz 💧 Today: ${totalOz}oz / ${goalOz}oz (${pct}%)`)
+        if (checkinState) {
+          await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+        }
+      } catch {
+        await ctx.reply("Couldn't log water right now — try again in a moment.")
+      }
+      return
+    }
   }
 
   // Planned meal shortcut — "had my planned breakfast", "had the lunch from the plan", etc.
@@ -257,6 +303,22 @@ bot.on(message('text'), async (ctx) => {
         await ctx.reply("No food logged yet today — you've got a fresh start! 🌅")
         return
       }
+      const MEAL_ORDER = ['Breakfast', 'Lunch', 'Dinner', 'Snack']
+      const MEAL_ICONS = { Breakfast: '🍳', Lunch: '🥗', Dinner: '🍽️', Snack: '🍎' }
+      const byMeal = {}
+      for (const l of logs) {
+        const key = l.meal || 'Snack'
+        if (!byMeal[key]) byMeal[key] = []
+        byMeal[key].push(l)
+      }
+      const lines = []
+      for (const meal of MEAL_ORDER) {
+        if (!byMeal[meal]) continue
+        lines.push(`${MEAL_ICONS[meal]} <b>${meal}</b>`)
+        for (const l of byMeal[meal]) {
+          lines.push(`  • ${l.description} (${l.calories} cal)`)
+        }
+      }
       const totals = logs.reduce(
         (acc, l) => ({
           protein: acc.protein + l.protein,
@@ -267,13 +329,13 @@ bot.on(message('text'), async (ctx) => {
         { protein: 0, carbs: 0, fat: 0, calories: 0 }
       )
       const pct = (val, target) => Math.round((val / target) * 100)
-      await ctx.reply(
-        `Here's how today's looking 📈\n\n` +
-        `Protein: ${totals.protein}g / ${settings.protein}g (${pct(totals.protein, settings.protein)}%)\n` +
-        `Carbs: ${totals.carbs}g / ${settings.carbs}g (${pct(totals.carbs, settings.carbs)}%)\n` +
-        `Fat: ${totals.fat}g / ${settings.fat}g (${pct(totals.fat, settings.fat)}%)\n` +
-        `Calories: ${totals.calories} / ${settings.calories} (${pct(totals.calories, settings.calories)}%)`,
-      )
+      lines.push('')
+      lines.push(`📊 <b>Totals</b>`)
+      lines.push(`Protein: ${totals.protein}g / ${settings.protein}g (${pct(totals.protein, settings.protein)}%)`)
+      lines.push(`Carbs: ${totals.carbs}g / ${settings.carbs}g (${pct(totals.carbs, settings.carbs)}%)`)
+      lines.push(`Fat: ${totals.fat}g / ${settings.fat}g (${pct(totals.fat, settings.fat)}%)`)
+      lines.push(`Calories: ${totals.calories} / ${settings.calories} (${pct(totals.calories, settings.calories)}%)`)
+      await ctx.reply(lines.join('\n'), { parse_mode: 'HTML' })
     } catch {
       await ctx.reply("Couldn't pull your stats right now — try again in a moment!")
     }

@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/body', label: 'Body' },
   { href: '/victories', label: 'Victories' },
   { href: '/templates', label: 'Templates' },
+  { href: '/settings', label: 'Settings' },
 ]
 
 export default function Nav() {

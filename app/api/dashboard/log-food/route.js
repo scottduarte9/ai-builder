@@ -1,5 +1,5 @@
 import { parseFoodLog } from '@/lib/claude'
-import { createFoodLog, updateFoodLog } from '@/lib/notion'
+import { createFoodLog, updateFoodLog, deleteFoodLog } from '@/lib/notion'
 
 export async function POST(req) {
   try {
@@ -21,6 +21,17 @@ export async function PUT(req) {
     const { pageId, description, protein, carbs, fat, calories } = await req.json()
     if (!pageId) return Response.json({ error: 'pageId required' }, { status: 400 })
     await updateFoodLog(pageId, { description, protein, carbs, fat, calories })
+    return Response.json({ ok: true })
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 })
+  }
+}
+
+export async function DELETE(req) {
+  try {
+    const { pageId } = await req.json()
+    if (!pageId) return Response.json({ error: 'pageId required' }, { status: 400 })
+    await deleteFoodLog(pageId)
     return Response.json({ ok: true })
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 })
