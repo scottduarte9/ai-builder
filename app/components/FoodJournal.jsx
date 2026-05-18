@@ -125,7 +125,6 @@ function WeeklySummary({ logsByDate, targets }) {
 }
 
 export default function FoodJournal({ logs: initialLogs, targets }) {
-  const [logs, setLogs] = useState(initialLogs)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -133,7 +132,15 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [deleteError, setDeleteError] = useState(null)
+  // deletedIds + editedLogs survive any router.refresh() — never reset from props
+  const [deletedIds, setDeletedIds] = useState(() => new Set())
+  const [editedLogs, setEditedLogs] = useState({})
   const router = useRouter()
+
+  // Derive display list from server data + client mutations
+  const logs = initialLogs
+    .filter(l => !deletedIds.has(l.id))
+    .map(l => editedLogs[l.id] ? { ...l, ...editedLogs[l.id] } : l)
 
   function startEdit(entry) {
     setEditingId(entry.id)
@@ -155,8 +162,8 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
         body: JSON.stringify({ pageId: entry.id, ...editForm }),
       })
       if (!res.ok) throw new Error('Failed to update')
-      // Optimistic: update local list
-      setLogs((prev) => prev.map((l) => l.id === entry.id ? { ...l, ...editForm } : l))
+      // Optimistic: store override — survives any router.refresh()
+      setEditedLogs(prev => ({ ...prev, [entry.id]: editForm }))
       setEditingId(null)
       router.refresh()
     } catch { /* silent */ } finally {
@@ -168,9 +175,8 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
     setDeletingId(entry.id)
     setConfirmDeleteId(null)
     setDeleteError(null)
-    // Optimistic: remove immediately — don't restore even on failure
-    // (restoring caused the "flicker" repopulation bug)
-    setLogs((prev) => prev.filter((l) => l.id !== entry.id))
+    // Optimistic: mark deleted — survives any router.refresh()
+    setDeletedIds(prev => new Set([...prev, entry.id]))
     try {
       const res = await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
@@ -180,9 +186,11 @@ export default function FoodJournal({ logs: initialLogs, targets }) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setDeleteError(data.error || 'Delete failed — refresh to check')
+        setDeletedIds(prev => { const s = new Set(prev); s.delete(entry.id); return s })
       }
     } catch {
       setDeleteError('Network error — refresh to check')
+      setDeletedIds(prev => { const s = new Set(prev); s.delete(entry.id); return s })
     } finally {
       setDeletingId(null)
     }

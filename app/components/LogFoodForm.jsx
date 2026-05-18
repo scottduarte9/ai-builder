@@ -16,9 +16,15 @@ export default function LogFoodForm({ initialLogs = [] }) {
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [deleteError, setDeleteError] = useState(null)
-  // Local copy for optimistic delete
-  const [logs, setLogs] = useState(initialLogs)
+  // deletedIds survives any router.refresh() — never resets from props
+  const [deletedIds, setDeletedIds] = useState(() => new Set())
+  const [editedLogs, setEditedLogs] = useState({}) // id → overrides
   const router = useRouter()
+
+  // Derive display list: apply server data filtered through client-side mutations
+  const logs = initialLogs
+    .filter(l => !deletedIds.has(l.id))
+    .map(l => editedLogs[l.id] ? { ...l, ...editedLogs[l.id] } : l)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -59,8 +65,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
     setDeletingId(log.id)
     setConfirmDeleteId(null)
     setDeleteError(null)
-    // Optimistic: remove from local list immediately — don't restore on failure
-    setLogs((prev) => prev.filter((l) => l.id !== log.id))
+    // Optimistic: mark deleted — survives any router.refresh()
+    setDeletedIds(prev => new Set([...prev, log.id]))
     try {
       const res = await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
@@ -70,12 +76,13 @@ export default function LogFoodForm({ initialLogs = [] }) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setDeleteError(data.error || 'Delete failed')
+        setDeletedIds(prev => { const s = new Set(prev); s.delete(log.id); return s })
       } else {
-        // Delay refresh so Notion propagates before re-fetch
         setTimeout(() => router.refresh(), 1500)
       }
     } catch {
       setDeleteError('Network error')
+      setDeletedIds(prev => { const s = new Set(prev); s.delete(log.id); return s })
     } finally {
       setDeletingId(null)
     }
@@ -90,8 +97,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
         body: JSON.stringify({ pageId: log.id, ...editForm }),
       })
       if (!res.ok) throw new Error('Failed to update')
-      // Optimistic: update local list
-      setLogs((prev) => prev.map((l) => l.id === log.id ? { ...l, ...editForm } : l))
+      // Optimistic: store edit override — survives any router.refresh()
+      setEditedLogs(prev => ({ ...prev, [log.id]: editForm }))
       setEditingId(null)
       router.refresh()
     } catch {
