@@ -41,7 +41,11 @@ bot.on(message('text'), async (ctx) => {
   if (pendingFood) {
     await ctx.sendChatAction('typing')
     try {
-      const parsed = await parseFoodLog(`${pendingFood} ${text}`)
+      const isYes = /^(yes|yep|yeah|yup|y|correct|exactly|affirmative|sure|👍)$/i.test(text.trim())
+      const input = isYes
+        ? `${pendingFood} — assume this was a full standard portion as typically prepared`
+        : `${pendingFood} ${text}`
+      const parsed = await parseFoodLog(input)
       await clearPendingFoodLog(chatId)
       const today = new Date().toISOString().split('T')[0]
       await createFoodLog({ date: today, ...parsed })
