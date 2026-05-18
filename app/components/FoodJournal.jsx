@@ -124,7 +124,8 @@ function WeeklySummary({ logsByDate, targets }) {
   )
 }
 
-export default function FoodJournal({ logs, targets }) {
+export default function FoodJournal({ logs: initialLogs, targets }) {
+  const [logs, setLogs] = useState(initialLogs)
   const [search, setSearch] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
@@ -147,11 +148,14 @@ export default function FoodJournal({ logs, targets }) {
   async function saveEdit(entry) {
     setEditLoading(true)
     try {
-      await fetch('/api/dashboard/log-food', {
+      const res = await fetch('/api/dashboard/log-food', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageId: entry.id, ...editForm }),
       })
+      if (!res.ok) throw new Error('Failed to update')
+      // Optimistic: update local list
+      setLogs((prev) => prev.map((l) => l.id === entry.id ? { ...l, ...editForm } : l))
       setEditingId(null)
       router.refresh()
     } catch { /* silent */ } finally {
@@ -162,14 +166,22 @@ export default function FoodJournal({ logs, targets }) {
   async function deleteEntry(entry) {
     setDeletingId(entry.id)
     setConfirmDeleteId(null)
+    // Optimistic: remove immediately
+    setLogs((prev) => prev.filter((l) => l.id !== entry.id))
     try {
-      await fetch('/api/dashboard/log-food', {
+      const res = await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageId: entry.id }),
       })
-      router.refresh()
-    } catch { /* silent */ } finally {
+      if (!res.ok) {
+        // Restore on failure
+        setLogs((prev) => [...prev, entry])
+      }
+    } catch {
+      // Restore on network error
+      setLogs((prev) => [...prev, entry])
+    } finally {
       setDeletingId(null)
     }
   }

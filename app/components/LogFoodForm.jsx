@@ -15,6 +15,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
   const [editLoading, setEditLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  // Local copy for optimistic delete
+  const [logs, setLogs] = useState(initialLogs)
   const router = useRouter()
 
   async function handleSubmit(e) {
@@ -33,7 +35,7 @@ export default function LogFoodForm({ initialLogs = [] }) {
       if (!res.ok) throw new Error(data.error || 'Failed to log food')
       setSuccess(data.logged.description)
       setText('')
-      router.refresh()
+      router.refresh() // refresh for macro bar
     } catch (err) {
       setError(err.message)
     } finally {
@@ -55,15 +57,23 @@ export default function LogFoodForm({ initialLogs = [] }) {
   async function deleteLog(log) {
     setDeletingId(log.id)
     setConfirmDeleteId(null)
+    // Optimistic: remove from local list immediately
+    setLogs((prev) => prev.filter((l) => l.id !== log.id))
     try {
-      await fetch('/api/dashboard/log-food', {
+      const res = await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageId: log.id }),
       })
-      router.refresh()
+      if (!res.ok) {
+        // Restore on failure
+        setLogs((prev) => [...prev, log])
+      } else {
+        router.refresh() // update macro bar
+      }
     } catch {
-      // silent
+      // Restore on network error
+      setLogs((prev) => [...prev, log])
     } finally {
       setDeletingId(null)
     }
@@ -78,6 +88,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
         body: JSON.stringify({ pageId: log.id, ...editForm }),
       })
       if (!res.ok) throw new Error('Failed to update')
+      // Optimistic: update local list
+      setLogs((prev) => prev.map((l) => l.id === log.id ? { ...l, ...editForm } : l))
       setEditingId(null)
       router.refresh()
     } catch {
@@ -117,10 +129,10 @@ export default function LogFoodForm({ initialLogs = [] }) {
         )}
       </form>
 
-      {initialLogs.length > 0 && (
+      {logs.length > 0 && (
         <div className="mt-4 space-y-2">
           <p className="text-xs font-semibold text-stone-400 uppercase tracking-wide">Today's logs</p>
-          {initialLogs.map((log) => (
+          {logs.map((log) => (
             <div key={log.id} className="bg-stone-50 border border-stone-100 rounded-xl p-3">
               {editingId === log.id ? (
                 <div className="space-y-2">
