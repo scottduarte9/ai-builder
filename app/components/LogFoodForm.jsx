@@ -14,6 +14,7 @@ export default function LogFoodForm({ initialLogs = [] }) {
   const [editForm, setEditForm] = useState({})
   const [editLoading, setEditLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const router = useRouter()
 
   async function handleSubmit(e) {
@@ -52,8 +53,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
   }
 
   async function deleteLog(log) {
-    if (!window.confirm(`Remove "${log.description}" from today's log?`)) return
     setDeletingId(log.id)
+    setConfirmDeleteId(null)
     try {
       await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
@@ -173,22 +174,41 @@ export default function LogFoodForm({ initialLogs = [] }) {
                       P: {log.protein}g · C: {log.carbs}g · F: {log.fat}g · {log.calories} cal
                     </p>
                   </div>
-                  <div className="flex gap-1 shrink-0 mt-0.5">
-                    <button
-                      onClick={() => startEdit(log)}
-                      className="text-stone-300 hover:text-stone-500 transition-colors text-sm"
-                      title="Edit entry"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={() => deleteLog(log)}
-                      disabled={deletingId === log.id}
-                      className="text-stone-300 hover:text-red-400 transition-colors text-sm"
-                      title="Delete entry"
-                    >
-                      🗑️
-                    </button>
+                  <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                    {confirmDeleteId === log.id ? (
+                      <>
+                        <button
+                          onClick={() => deleteLog(log)}
+                          disabled={deletingId === log.id}
+                          className="text-xs bg-red-500 text-white rounded-lg px-2 py-1 font-medium hover:bg-red-600"
+                        >
+                          {deletingId === log.id ? '…' : 'Delete'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs text-stone-500 bg-stone-100 rounded-lg px-2 py-1 font-medium hover:bg-stone-200"
+                        >
+                          Keep
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(log)}
+                          className="text-stone-300 hover:text-stone-500 transition-colors text-sm"
+                          title="Edit entry"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(log.id)}
+                          className="text-stone-300 hover:text-red-400 transition-colors text-sm"
+                          title="Delete entry"
+                        >
+                          🗑️
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

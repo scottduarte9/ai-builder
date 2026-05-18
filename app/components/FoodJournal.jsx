@@ -130,6 +130,7 @@ export default function FoodJournal({ logs, targets }) {
   const [editForm, setEditForm] = useState({})
   const [editLoading, setEditLoading] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const router = useRouter()
 
   function startEdit(entry) {
@@ -159,8 +160,8 @@ export default function FoodJournal({ logs, targets }) {
   }
 
   async function deleteEntry(entry) {
-    if (!window.confirm(`Remove "${entry.description}"?`)) return
     setDeletingId(entry.id)
+    setConfirmDeleteId(null)
     try {
       await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
@@ -348,17 +349,36 @@ export default function FoodJournal({ logs, targets }) {
                                 <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">
                                   {entry.calories} cal
                                 </span>
-                                <button
-                                  onClick={() => startEdit(entry)}
-                                  className="text-stone-300 hover:text-stone-500 transition-colors text-sm leading-none"
-                                  title="Edit"
-                                >✏️</button>
-                                <button
-                                  onClick={() => deleteEntry(entry)}
-                                  disabled={deletingId === entry.id}
-                                  className="text-stone-300 hover:text-red-400 transition-colors text-sm leading-none"
-                                  title="Delete"
-                                >🗑️</button>
+                                {confirmDeleteId === entry.id ? (
+                                  <>
+                                    <button
+                                      onClick={() => deleteEntry(entry)}
+                                      disabled={deletingId === entry.id}
+                                      className="text-xs bg-red-500 text-white rounded-lg px-2 py-1 font-medium hover:bg-red-600"
+                                    >
+                                      {deletingId === entry.id ? '…' : 'Delete'}
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteId(null)}
+                                      className="text-xs text-stone-500 bg-stone-100 rounded-lg px-2 py-1 font-medium hover:bg-stone-200"
+                                    >
+                                      Keep
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEdit(entry)}
+                                      className="text-stone-300 hover:text-stone-500 transition-colors text-sm leading-none"
+                                      title="Edit"
+                                    >✏️</button>
+                                    <button
+                                      onClick={() => setConfirmDeleteId(entry.id)}
+                                      className="text-stone-300 hover:text-red-400 transition-colors text-sm leading-none"
+                                      title="Delete"
+                                    >🗑️</button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           )}
