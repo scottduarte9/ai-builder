@@ -746,7 +746,6 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
         throw new Error(data.error || `Server error ${res.status}`)
       }
       setLoggedMeals(prev => new Set([...prev, meal.title]))
-      router.refresh() // update macro progress bar
     } catch (err) {
       setLogError(err.message)
     } finally {
