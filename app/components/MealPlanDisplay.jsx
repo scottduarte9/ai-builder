@@ -556,10 +556,7 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
   const [refineError, setRefineError] = useState(null)
   const router = useRouter()
 
-  // Log button state
-  const [loggedMeals, setLoggedMeals] = useState(
-    () => new Set(todayLogs.map(l => l.description))
-  )
+  // Log button state — derive logged status from todayLogs (single source of truth)
   const [loggingSlot, setLoggingSlot] = useState(null)
   const [logError, setLogError] = useState(null)
   const [logErrorSlot, setLogErrorSlot] = useState(null) // which slot errored
@@ -724,15 +721,16 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
 
   // ── Log meal from plan ─────────────────────────────────────────────────
   async function logMeal(meal, slotKey) {
-    if (loggedMeals.has(meal.title)) return
+    const description = meal.title || meal.bullets[0] || capitalize(meal.type)
+    // Already logged — check todayLogs (single source of truth)
+    if (todayLogs.some(l => l.description === description)) return
     setLoggingSlot(slotKey)
     setLogError(null)
     setLogErrorSlot(null)
     try {
       const { cal, p, c, f } = parseMacros(meal.macros)
       const mealType = capitalize(meal.type)
-      // Use title, or fall back to first bullet if title is empty
-      const description = meal.title || meal.bullets[0] || mealType
+      const today = new Date().toISOString().split('T')[0]
 
       const res = await fetch('/api/dashboard/log-food', {
         method: 'POST',
@@ -751,11 +749,9 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
       if (!res.ok) {
         throw new Error(data.error || `Server error ${res.status}`)
       }
-      setLoggedMeals(prev => new Set([...prev, meal.title || description]))
-      // Notify parent DashboardClient so MacroProgress updates immediately
-      if (onLog && data.logged) {
-        onLog(data.logged)
-      }
+      // Always notify parent — use data.logged if available, otherwise construct entry
+      const entry = data.logged || { id: `temp-${Date.now()}`, date: today, description, meal: mealType, calories: cal, protein: p, carbs: c, fat: f }
+      if (onLog) onLog(entry)
     } catch (err) {
       console.error('[logMeal] error:', err.message)
       setLogError(err.message)
@@ -958,8 +954,8 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                                       loading={heartLoading === key}
                                     />
                                   </div>
-                                  {/* Log button */}
-                                  {loggedMeals.has(meal.title) ? (
+                                  {/* Log button — derived from todayLogs (single source of truth) */}
+                                  {todayLogs.some(l => l.description === (meal.title || meal.bullets[0] || capitalize(meal.type))) ? (
                                     <span className="text-xs font-semibold text-emerald-500 px-2 py-1">✓ Logged</span>
                                   ) : logErrorSlot === slotKey ? (
                                     <button
