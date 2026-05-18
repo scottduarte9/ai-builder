@@ -8,8 +8,8 @@ export async function POST(req) {
     // Pre-parsed path — description + meal + macros provided directly (skips Claude)
     if (body.description && body.meal && body.calories !== undefined) {
       const today = new Date().toISOString().split('T')[0]
-      await createFoodLog({ date: today, ...body })
-      return Response.json({ ok: true })
+      const page = await createFoodLog({ date: today, ...body })
+      return Response.json({ ok: true, logged: { id: page.id, date: today, ...body } })
     }
 
     // Original Claude path
@@ -18,9 +18,9 @@ export async function POST(req) {
 
     const parsed = await parseFoodLog(text)
     const today = new Date().toISOString().split('T')[0]
-    await createFoodLog({ date: today, ...parsed })
+    const page = await createFoodLog({ date: today, ...parsed })
 
-    return Response.json({ ok: true, logged: parsed })
+    return Response.json({ ok: true, logged: { id: page.id, date: today, ...parsed } })
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 })
   }

@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 const MEAL_ICONS = { Breakfast: '🍳', Lunch: '🥗', Dinner: '🍽️', Snack: '🍎' }
 
-export default function LogFoodForm({ initialLogs = [] }) {
+export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate }) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -16,15 +15,6 @@ export default function LogFoodForm({ initialLogs = [] }) {
   const [deletingId, setDeletingId] = useState(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [deleteError, setDeleteError] = useState(null)
-  // deletedIds survives any router.refresh() — never resets from props
-  const [deletedIds, setDeletedIds] = useState(() => new Set())
-  const [editedLogs, setEditedLogs] = useState({}) // id → overrides
-  const router = useRouter()
-
-  // Derive display list: apply server data filtered through client-side mutations
-  const logs = initialLogs
-    .filter(l => !deletedIds.has(l.id))
-    .map(l => editedLogs[l.id] ? { ...l, ...editedLogs[l.id] } : l)
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -42,7 +32,7 @@ export default function LogFoodForm({ initialLogs = [] }) {
       if (!res.ok) throw new Error(data.error || 'Failed to log food')
       setSuccess(data.logged.description)
       setText('')
-      router.refresh() // refresh for macro bar
+      if (onAdd) onAdd(data.logged)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -65,8 +55,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
     setDeletingId(log.id)
     setConfirmDeleteId(null)
     setDeleteError(null)
-    // Optimistic: mark deleted — survives any router.refresh()
-    setDeletedIds(prev => new Set([...prev, log.id]))
+    // Optimistic: remove from parent state immediately
+    if (onRemove) onRemove(log.id)
     try {
       const res = await fetch('/api/dashboard/log-food', {
         method: 'DELETE',
@@ -76,13 +66,12 @@ export default function LogFoodForm({ initialLogs = [] }) {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setDeleteError(data.error || 'Delete failed')
-        setDeletedIds(prev => { const s = new Set(prev); s.delete(log.id); return s })
-      } else {
-        setTimeout(() => router.refresh(), 1500)
+        // Re-add on failure — parent addLog with the original entry
+        if (onAdd) onAdd(log)
       }
     } catch {
       setDeleteError('Network error')
-      setDeletedIds(prev => { const s = new Set(prev); s.delete(log.id); return s })
+      if (onAdd) onAdd(log)
     } finally {
       setDeletingId(null)
     }
@@ -97,10 +86,8 @@ export default function LogFoodForm({ initialLogs = [] }) {
         body: JSON.stringify({ pageId: log.id, ...editForm }),
       })
       if (!res.ok) throw new Error('Failed to update')
-      // Optimistic: store edit override — survives any router.refresh()
-      setEditedLogs(prev => ({ ...prev, [log.id]: editForm }))
+      if (onUpdate) onUpdate(log.id, editForm)
       setEditingId(null)
-      router.refresh()
     } catch {
       // silent
     } finally {

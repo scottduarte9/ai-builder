@@ -1,12 +1,7 @@
 import { getTodayFoodLogs, getUserSettings, getCurrentMealPlan, getRecentWorkouts, getLikedMeals } from '@/lib/notion'
-import MacroProgress from '@/app/components/MacroProgress'
-import LogFoodForm from '@/app/components/LogFoodForm'
-import LogWorkoutForm from '@/app/components/LogWorkoutForm'
-import LogWeightForm from '@/app/components/LogWeightForm'
-import MealPlanDisplay from '@/app/components/MealPlanDisplay'
+import DashboardClient from '@/app/components/DashboardClient'
 import WeightChart from '@/app/components/WeightChart'
 import RecentWorkouts from '@/app/components/RecentWorkouts'
-import WaterWidget from '@/app/components/WaterWidget'
 
 export default async function Dashboard() {
   const [logs, settings, mealPlan, workouts, likedMeals] = await Promise.all([
@@ -45,16 +40,12 @@ export default async function Dashboard() {
       {/* Content */}
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
         <p className="text-xs text-stone-400">{today}</p>
-        <MacroProgress totals={totals} targets={targets} />
-        <WaterWidget />
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <LogFoodForm initialLogs={logs} />
-          <LogWorkoutForm />
-          <LogWeightForm />
-        </div>
-
-        <MealPlanDisplay initialPlan={mealPlan} initialLikedMeals={likedMeals} targets={targets} todayLogs={logs} />
+        <DashboardClient
+          initialLogs={logs}
+          targets={targets}
+          initialPlan={mealPlan}
+          initialLikedMeals={likedMeals}
+        />
 
         <WeightChart />
 

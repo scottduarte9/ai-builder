@@ -542,7 +542,7 @@ function PlannerForm({ onGenerate, generating }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], targets = null, todayLogs = [] }) {
+export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], targets = null, todayLogs = [], onLog }) {
   const [plan, setPlan] = useState(initialPlan)
   const [likedMeals, setLikedMeals] = useState(initialLikedMeals.map((m) => m.name))
   const [generating, setGenerating] = useState(false)
@@ -741,13 +741,15 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
           fat: f,
         }),
       })
+      const data = await res.json()
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
         throw new Error(data.error || `Server error ${res.status}`)
       }
       setLoggedMeals(prev => new Set([...prev, meal.title]))
-      // Delay refresh so Notion propagates before re-fetch, same pattern as delete
-      setTimeout(() => router.refresh(), 1500)
+      // Notify parent DashboardClient so MacroProgress updates immediately
+      if (onLog && data.logged) {
+        onLog(data.logged)
+      }
     } catch (err) {
       setLogError(err.message)
     } finally {
