@@ -542,7 +542,7 @@ function PlannerForm({ onGenerate, generating }) {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], targets = null }) {
+export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], targets = null, todayLogs = [] }) {
   const [plan, setPlan] = useState(initialPlan)
   const [likedMeals, setLikedMeals] = useState(initialLikedMeals.map((m) => m.name))
   const [generating, setGenerating] = useState(false)
@@ -555,6 +555,12 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
   const [refining, setRefining] = useState(false)
   const [refineError, setRefineError] = useState(null)
   const router = useRouter()
+
+  // Log button state
+  const [loggedMeals, setLoggedMeals] = useState(
+    () => new Set(todayLogs.map(l => l.description))
+  )
+  const [loggingSlot, setLoggingSlot] = useState(null)
 
   // Mutable plan state for swaps
   const [planDays, setPlanDays] = useState(() => parseMealPlan(initialPlan?.plan))
@@ -711,6 +717,33 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
       setRefineError(err.message)
     } finally {
       setRefining(false)
+    }
+  }
+
+  // ── Log meal from plan ─────────────────────────────────────────────────
+  async function logMeal(meal, slotKey) {
+    if (loggedMeals.has(meal.title)) return
+    setLoggingSlot(slotKey)
+    try {
+      const { cal, p, c, f } = parseMacros(meal.macros)
+      const mealType = capitalize(meal.type)
+      await fetch('/api/dashboard/log-food', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: meal.title,
+          meal: mealType,
+          calories: cal,
+          protein: p,
+          carbs: c,
+          fat: f,
+        }),
+      })
+      setLoggedMeals(prev => new Set([...prev, meal.title]))
+    } catch {
+      // silent
+    } finally {
+      setLoggingSlot(null)
     }
   }
 
@@ -903,6 +936,19 @@ export default function MealPlanDisplay({ initialPlan, initialLikedMeals = [], t
                                       loading={heartLoading === key}
                                     />
                                   </div>
+                                  {/* Log button */}
+                                  {loggedMeals.has(meal.title) ? (
+                                    <span className="text-xs font-semibold text-emerald-500 px-2 py-1">✓ Logged</span>
+                                  ) : (
+                                    <button
+                                      onClick={() => logMeal(meal, slotKey)}
+                                      disabled={loggingSlot === slotKey}
+                                      className="text-xs px-2 py-1 rounded-lg border border-stone-200 bg-white text-stone-400 hover:border-emerald-400 hover:text-emerald-500 transition-colors"
+                                      title="Log this meal for today"
+                                    >
+                                      {loggingSlot === slotKey ? '…' : '+ Log'}
+                                    </button>
+                                  )}
                                   {/* Save as Recipe button */}
                                   <button
                                     onClick={() => saveAsRecipe(meal, slotKey)}

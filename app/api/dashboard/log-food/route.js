@@ -3,7 +3,17 @@ import { createFoodLog, updateFoodLog, deleteFoodLog } from '@/lib/notion'
 
 export async function POST(req) {
   try {
-    const { text } = await req.json()
+    const body = await req.json()
+
+    // Pre-parsed path — description + meal + macros provided directly (skips Claude)
+    if (body.description && body.meal && body.calories !== undefined) {
+      const today = new Date().toISOString().split('T')[0]
+      await createFoodLog({ date: today, ...body })
+      return Response.json({ ok: true })
+    }
+
+    // Original Claude path
+    const { text } = body
     if (!text?.trim()) return Response.json({ error: 'No text provided' }, { status: 400 })
 
     const parsed = await parseFoodLog(text)
