@@ -55,7 +55,7 @@ export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate }) {
     setDeletingId(log.id)
     setConfirmDeleteId(null)
     setDeleteError(null)
-    // Optimistic: remove from parent state immediately
+    // Optimistic remove — stays gone regardless of API result
     if (onRemove) onRemove(log.id)
     try {
       const res = await fetch('/api/dashboard/log-food', {
@@ -65,13 +65,11 @@ export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate }) {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        setDeleteError(data.error || 'Delete failed')
-        // Re-add on failure — parent addLog with the original entry
-        if (onAdd) onAdd(log)
+        // Show error but keep entry removed from UI
+        setDeleteError(data.error || 'Delete failed — entry may still appear after refresh')
       }
     } catch {
-      setDeleteError('Network error')
-      if (onAdd) onAdd(log)
+      setDeleteError('Network error — entry may still appear after refresh')
     } finally {
       setDeletingId(null)
     }
