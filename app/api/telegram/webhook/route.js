@@ -29,11 +29,20 @@ bot.on(message('text'), async (ctx) => {
     return
   }
 
-  // Check if we're mid check-in
+  // Check if we're mid check-in — but let food/workout/weight logs escape
   const checkinState = await getCheckinState(chatId)
   if (checkinState) {
-    await handleCheckinReply(ctx, text, checkinState)
-    return
+    const lower = text.toLowerCase()
+    const looksLikeLog =
+      /\d+(\.\d+)?\s*(lbs?|pounds?|kg)/.test(lower) ||
+      /workout|exercise|yoga|run|walk|lift|gym|hiit|pilates|swim|bike|cardio|strength/.test(lower) ||
+      /\b(had|ate|eating|logged?|breakfast|lunch|dinner|snack)\b/.test(lower)
+    if (!looksLikeLog) {
+      await handleCheckinReply(ctx, text, checkinState)
+      return
+    }
+    // Fall through to normal food/workout/weight handling below,
+    // then re-surface the current check-in question afterward
   }
 
   // Check if we're awaiting a food quantity follow-up
@@ -55,6 +64,9 @@ bot.on(message('text'), async (ctx) => {
         `Protein: ${parsed.protein}g · Carbs: ${parsed.carbs}g · Fat: ${parsed.fat}g · Calories: ${parsed.calories}`,
         { parse_mode: 'HTML' }
       )
+      if (checkinState) {
+        await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+      }
     } catch (err) {
       console.error('Food log error (pending):', err)
       await clearPendingFoodLog(chatId)
@@ -100,6 +112,9 @@ bot.on(message('text'), async (ctx) => {
           `Protein: ${parsed.protein}g · Carbs: ${parsed.carbs}g · Fat: ${parsed.fat}g · Calories: ${parsed.calories}`,
           { parse_mode: 'HTML' }
         )
+        if (checkinState) {
+          await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+        }
       }
     } catch (err) {
       console.error('Food log error:', err)
@@ -115,6 +130,9 @@ bot.on(message('text'), async (ctx) => {
       const today = new Date().toISOString().split('T')[0]
       await createWorkoutLog({ date: today, ...parsed })
       await ctx.reply(`Love it! Logged your ${parsed.type} session (${parsed.duration} mins) 💪`)
+      if (checkinState) {
+        await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+      }
     } catch {
       await ctx.reply("I couldn't quite parse that workout — try something like 'Did 40 min yoga today'.")
     }
@@ -135,6 +153,9 @@ bot.on(message('text'), async (ctx) => {
           `🎉 You've lost 5+ lbs since your last target update! Your daily targets have been adjusted:\n\n` +
           `Calories: ${recalibrated.calories}\nProtein: ${recalibrated.protein}g\nCarbs: ${recalibrated.carbs}g\nFat: ${recalibrated.fat}g`
         )
+      }
+      if (checkinState) {
+        await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
       }
     } else {
       await ctx.reply("I couldn't find a number in that. Try something like '142.5 lbs'.")
