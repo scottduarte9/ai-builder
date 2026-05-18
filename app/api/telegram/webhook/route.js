@@ -1,7 +1,7 @@
 import { Telegraf } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { parseFoodLog, parseWorkoutLog, detectIntent, generateCheckinCoachResponse, generateCheckinClosing, generateMealPlan } from '@/lib/claude'
-import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros, createMealPlan, getLikedMeals } from '@/lib/notion'
+import { createFoodLog, getTodayFoodLogs, createWorkoutLog, createWeightLog, getUserSettings, getCurrentMealPlan, createCheckinResponse, getCheckinResponses, getPendingFoodLog, setPendingFoodLog, clearPendingFoodLog, checkAndRecalibrateMacros, createMealPlan, getLikedMeals, getMealTemplates } from '@/lib/notion'
 import { getCheckinState, clearCheckinState, advanceCheckinState, getMealPlannerState, setMealPlannerState, clearMealPlannerState } from '@/lib/state'
 import { PLANNER_QUESTIONS, PLANNER_KEYS } from '@/app/api/webhooks/weekly-meal-plan/route'
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN)
@@ -51,11 +51,37 @@ bot.on(message('text'), async (ctx) => {
     await ctx.sendChatAction('typing')
     try {
       const isYes = /^(yes|yep|yeah|yup|y|correct|exactly|affirmative|sure|👍)$/i.test(text.trim())
+      await clearPendingFoodLog(chatId)
+
+      // If "yes" and the original message matches a saved recipe, use exact template macros
+      if (isYes) {
+        const templateMatch = await matchTemplate(pendingFood)
+        if (templateMatch) {
+          const { template: t, qty } = templateMatch
+          const today = new Date().toISOString().split('T')[0]
+          const protein = Math.round(t.protein * qty)
+          const carbs = Math.round(t.carbs * qty)
+          const fat = Math.round(t.fat * qty)
+          const calories = Math.round(t.calories * qty)
+          const description = qty > 1 ? `${t.name} ×${qty}` : t.name
+          await createFoodLog({ date: today, meal: t.meal, description, protein, carbs, fat, calories })
+          await ctx.reply(
+            `Perfect, got it! Logged ${description} ✅\n\n` +
+            `📊 <b>${description}</b>\n` +
+            `Protein: ${protein}g · Carbs: ${carbs}g · Fat: ${fat}g · Calories: ${calories}`,
+            { parse_mode: 'HTML' }
+          )
+          if (checkinState) {
+            await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+          }
+          return
+        }
+      }
+
       const input = isYes
         ? `${pendingFood} — assume this was a full standard portion as typically prepared`
         : `${pendingFood} ${text}`
       const parsed = await parseFoodLog(input)
-      await clearPendingFoodLog(chatId)
       const today = new Date().toISOString().split('T')[0]
       await createFoodLog({ date: today, ...parsed })
       await ctx.reply(
@@ -99,6 +125,30 @@ bot.on(message('text'), async (ctx) => {
   if (intent === 'food') {
     await ctx.sendChatAction('typing')
     try {
+      // Check saved recipes first — if the message names a recipe, use its exact macros
+      const templateMatch = await matchTemplate(text)
+      if (templateMatch) {
+        const { template: t, qty } = templateMatch
+        const today = new Date().toISOString().split('T')[0]
+        const protein = Math.round(t.protein * qty)
+        const carbs = Math.round(t.carbs * qty)
+        const fat = Math.round(t.fat * qty)
+        const calories = Math.round(t.calories * qty)
+        const description = qty > 1 ? `${t.name} ×${qty}` : t.name
+        await createFoodLog({ date: today, meal: t.meal, description, protein, carbs, fat, calories })
+        await ctx.reply(
+          `Nice! Logged ${description} ✅\n\n` +
+          `📊 <b>${description}</b>\n` +
+          `Protein: ${protein}g · Carbs: ${carbs}g · Fat: ${fat}g · Calories: ${calories}`,
+          { parse_mode: 'HTML' }
+        )
+        if (checkinState) {
+          await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+        }
+        return
+      }
+
+      // No template match — let Claude parse it
       const parsed = await parseFoodLog(text)
       if (parsed.needsQuantity) {
         await setPendingFoodLog(chatId, text)
@@ -207,6 +257,24 @@ bot.on(message('voice'), async (ctx) => {
     "I can hear you! Voice transcription is coming soon — for now, just type out what you had and I'll log it 😊"
   )
 })
+
+// ── Template name matcher ──────────────────────────────────────────────────
+// Returns { template, qty } if the text matches a saved recipe name, otherwise null.
+// Handles: "egg cups", "I had egg cups for breakfast", "3 egg cups", "egg cups x2"
+async function matchTemplate(text) {
+  let templates
+  try { templates = await getMealTemplates() } catch { return null }
+  const lower = text.toLowerCase()
+  for (const t of templates) {
+    const escaped = t.name.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const beforeMatch = lower.match(new RegExp(`(\\d+)\\s+${escaped}`))
+    const afterMatch = lower.match(new RegExp(`${escaped}\\s*[x×]\\s*(\\d+)`))
+    if (beforeMatch) return { template: t, qty: parseInt(beforeMatch[1]) }
+    if (afterMatch) return { template: t, qty: parseInt(afterMatch[1]) }
+    if (lower.includes(t.name.toLowerCase())) return { template: t, qty: 1 }
+  }
+  return null
+}
 
 // ── Meal planner reply handler ─────────────────────────────────────────────
 
