@@ -120,6 +120,42 @@ bot.on(message('text'), async (ctx) => {
     return
   }
 
+  // Planned meal shortcut — "had my planned breakfast", "had the lunch from the plan", etc.
+  {
+    const lower = text.toLowerCase()
+    const mealTypeMatch = lower.match(/\b(breakfast|lunch|dinner|snack)\b/)
+    const referesPlan = /\bplan\b|\bschedule\b|\brecommend(ed)?\b|\bweekly\b|\bas planned\b/.test(lower)
+    if (mealTypeMatch && referesPlan) {
+      await ctx.sendChatAction('typing')
+      try {
+        const plan = await getCurrentMealPlan()
+        if (plan?.plan) {
+          const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' })
+          const meal = extractMealFromPlan(plan.plan, dayName, mealTypeMatch[1])
+          if (meal) {
+            const today = new Date().toISOString().split('T')[0]
+            await createFoodLog({ date: today, ...meal })
+            await ctx.reply(
+              `Logged your planned ${meal.meal.toLowerCase()} ✅\n\n` +
+              `📊 <b>${meal.name}</b>\n` +
+              `Protein: ${meal.protein}g · Carbs: ${meal.carbs}g · Fat: ${meal.fat}g · Calories: ${meal.calories}`,
+              { parse_mode: 'HTML' }
+            )
+            if (checkinState) {
+              await ctx.reply(`💚 Logged! When you're ready, here's where we left off in your check-in:\n\n${CHECKIN_QUESTIONS[checkinState.questionIndex]}`)
+            }
+            return
+          }
+        }
+        await ctx.reply("I couldn't find today's meal plan — try logging it manually or generate a new plan from the dashboard.")
+      } catch (err) {
+        console.error('Planned meal lookup error:', err)
+        await ctx.reply("Couldn't pull the meal plan right now — try again in a moment!")
+      }
+      return
+    }
+  }
+
   const intent = await detectIntent(text)
 
   if (intent === 'food') {
@@ -257,6 +293,56 @@ bot.on(message('voice'), async (ctx) => {
     "I can hear you! Voice transcription is coming soon — for now, just type out what you had and I'll log it 😊"
   )
 })
+
+// ── Planned meal lookup ────────────────────────────────────────────────────
+// Parses today's meal out of the stored plan text.
+function extractMealFromPlan(planText, dayName, mealType) {
+  const lines = planText.split('\n')
+  const mealCap = mealType.charAt(0).toUpperCase() + mealType.slice(1)
+  let inDay = false
+  let inMeal = false
+  let mealName = null
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    // Day header (e.g. "Monday")
+    if (/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$/i.test(trimmed)) {
+      inDay = trimmed.toLowerCase() === dayName.toLowerCase()
+      inMeal = false
+      mealName = null
+      continue
+    }
+    if (!inDay) continue
+
+    // Meal type header (e.g. "Breakfast: Greek Yogurt Parfait")
+    if (trimmed.toLowerCase().startsWith(mealType.toLowerCase() + ':')) {
+      inMeal = true
+      mealName = trimmed.slice(mealType.length + 1).trim()
+      continue
+    }
+
+    // Another meal type header — we've left this meal's section
+    if (inMeal && /^(Breakfast|Lunch|Dinner|Snack):/i.test(trimmed)) {
+      inMeal = false
+    }
+
+    // Macros line — this is what we're after
+    if (inMeal && /^Macros:/i.test(trimmed)) {
+      const m = trimmed.match(/(\d+)\s*cal\s*\|\s*(\d+)g?\s*P\s*\|\s*(\d+)g?\s*C\s*\|\s*(\d+)g?\s*F/i)
+      if (m && mealName) {
+        return {
+          name: mealName,
+          meal: mealCap,
+          calories: parseInt(m[1]),
+          protein: parseInt(m[2]),
+          carbs: parseInt(m[3]),
+          fat: parseInt(m[4]),
+        }
+      }
+    }
+  }
+  return null
+}
 
 // ── Template name matcher ──────────────────────────────────────────────────
 // Returns { template, qty } if the text matches a saved recipe name, otherwise null.
