@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getTodayFoodLogs, getUserSettings, getCurrentMealPlan, getRecentWorkouts, getLikedMeals } from '@/lib/notion'
 import DashboardClient from '@/app/components/DashboardClient'
 import WeightChart from '@/app/components/WeightChart'
