@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { getRecentFoodLogs, getUserSettings } from '@/lib/notion'
 import FoodJournal from '@/app/components/FoodJournal'
 

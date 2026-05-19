@@ -4,7 +4,14 @@ import { useState } from 'react'
 
 const MEAL_ICONS = { Breakfast: '🍳', Lunch: '🥗', Dinner: '🍽️', Snack: '🍎' }
 
-export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate }) {
+function getTodayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate, selectedDate, loadingDate }) {
+  const todayStr = getTodayStr()
+  const isToday = !selectedDate || selectedDate === todayStr
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -26,7 +33,7 @@ export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate }) {
       const res = await fetch('/api/dashboard/log-food', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, date: selectedDate || getTodayStr() }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to log food')
@@ -98,6 +105,11 @@ export default function LogFoodForm({ logs = [], onAdd, onRemove, onUpdate }) {
       <div className="flex items-center gap-2 mb-4">
         <span className="text-lg">🥗</span>
         <h2 className="section-title mb-0">Log Food</h2>
+        {!isToday && selectedDate && (
+          <span className="ml-auto text-[10px] font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+            {selectedDate}
+          </span>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">

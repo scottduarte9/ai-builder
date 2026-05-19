@@ -1,5 +1,16 @@
 import { parseFoodLog } from '@/lib/claude'
-import { createFoodLog, updateFoodLog, deleteFoodLog } from '@/lib/notion'
+import { createFoodLog, updateFoodLog, deleteFoodLog, getFoodLogsForDate } from '@/lib/notion'
+
+export async function GET(req) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const date = searchParams.get('date') || new Date().toISOString().split('T')[0]
+    const logs = await getFoodLogsForDate(date)
+    return Response.json({ logs })
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 })
+  }
+}
 
 export async function POST(req) {
   try {
@@ -13,14 +24,14 @@ export async function POST(req) {
     }
 
     // Original Claude path
-    const { text } = body
+    const { text, date: bodyDate } = body
     if (!text?.trim()) return Response.json({ error: 'No text provided' }, { status: 400 })
 
     const parsed = await parseFoodLog(text)
-    const today = new Date().toISOString().split('T')[0]
-    const page = await createFoodLog({ date: today, ...parsed })
+    const date = bodyDate || new Date().toISOString().split('T')[0]
+    const page = await createFoodLog({ date, ...parsed })
 
-    return Response.json({ ok: true, logged: { id: page.id, date: today, ...parsed } })
+    return Response.json({ ok: true, logged: { id: page.id, date, ...parsed } })
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 })
   }
