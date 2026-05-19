@@ -38,16 +38,20 @@ export default function DashboardClient({ initialLogs, targets, initialPlan, ini
   const [selectedDate, setSelectedDate] = useState(todayStr)
   const [logs, setLogs] = useState(initialLogs)
   const [loadingDate, setLoadingDate] = useState(false)
-  const isInitialMount = useRef(true)
+  const mountedDate = useRef(null)
 
-  // Fetch logs when date changes (skip very first render — use server-provided initialLogs)
+  // Always fetch fresh logs from the client — this bypasses both Next.js caching
+  // and Notion's eventual consistency (new entries take ~1s to appear in queries).
+  // Server-rendered initialLogs still paint instantly; this silently corrects stale data.
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
+    const isDateChange = mountedDate.current !== null && mountedDate.current !== selectedDate
+    mountedDate.current = selectedDate
+
+    if (isDateChange) {
+      setLoadingDate(true)
+      setLogs([])
     }
-    setLoadingDate(true)
-    setLogs([])
+
     fetch(`/api/dashboard/log-food?date=${selectedDate}`)
       .then(r => r.json())
       .then(data => { if (data.logs) setLogs(data.logs) })
